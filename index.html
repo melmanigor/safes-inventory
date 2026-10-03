@@ -70,41 +70,28 @@
             }
         });
 
-        // --- לוגיקת לשוניות (ניווט) ---
-        const tabAddSafe = document.getElementById('tabAddSafe');
-        const tabInventory = document.getElementById('tabInventory');
-        const addSafeView = document.getElementById('addSafeView');
-        const inventoryView = document.getElementById('inventoryView');
+        // --- לוגיקת לשוניות חכמה (3 לשוניות) ---
+        const tabs = ['tabAddSafe', 'tabInventory', 'tabStats'];
+        const views = ['addSafeView', 'inventoryView', 'statsView'];
 
-        tabAddSafe.addEventListener('click', () => {
-            addSafeView.classList.remove('hidden');
-            inventoryView.classList.add('hidden');
+        function switchTab(activeTabId, activeViewId) {
+            tabs.forEach(id => {
+                const btn = document.getElementById(id);
+                if (id === activeTabId) {
+                    btn.className = "bg-blue-700 text-white dark:bg-blue-600 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold shadow-sm transition-colors text-xs md:text-sm flex items-center justify-center gap-1 md:gap-2 flex-1";
+                } else {
+                    btn.className = "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold shadow-sm transition-colors text-xs md:text-sm flex items-center justify-center gap-1 md:gap-2 flex-1";
+                }
+            });
+            views.forEach(id => {
+                document.getElementById(id).classList.toggle('hidden', id !== activeViewId);
+            });
+        }
 
-            tabAddSafe.classList.replace('bg-slate-200', 'bg-blue-700');
-            tabAddSafe.classList.replace('text-slate-700', 'text-white');
-            tabAddSafe.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
-            tabAddSafe.classList.replace('dark:text-slate-300', 'dark:text-white');
-
-            tabInventory.classList.replace('bg-blue-700', 'bg-slate-200');
-            tabInventory.classList.replace('text-white', 'text-slate-700');
-            tabInventory.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
-            tabInventory.classList.replace('dark:text-white', 'dark:text-slate-300');
-        });
-
-        tabInventory.addEventListener('click', () => {
-            inventoryView.classList.remove('hidden');
-            addSafeView.classList.add('hidden');
-
-            tabInventory.classList.replace('bg-slate-200', 'bg-blue-700');
-            tabInventory.classList.replace('text-slate-700', 'text-white');
-            tabInventory.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
-            tabInventory.classList.replace('dark:text-slate-300', 'dark:text-white');
-
-            tabAddSafe.classList.replace('bg-blue-700', 'bg-slate-200');
-            tabAddSafe.classList.replace('text-white', 'text-slate-700');
-            tabAddSafe.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
-            tabAddSafe.classList.replace('dark:text-white', 'dark:text-slate-300');
-        });
+        document.getElementById('tabAddSafe').addEventListener('click', () => switchTab('tabAddSafe', 'addSafeView'));
+        document.getElementById('tabInventory').addEventListener('click', () => switchTab('tabInventory', 'inventoryView'));
+        document.getElementById('tabStats').addEventListener('click', () => switchTab('tabStats', 'statsView'));
+        // ----------------------------------------
 
         const form = document.getElementById('addSafeForm');
         const submitBtn = document.getElementById('submitBtn');
@@ -119,15 +106,9 @@
 
         const ituranWrapper = document.getElementById('ituranWrapper');
         const hasIturanInput = document.getElementById('hasIturan');
+
         const allowedIturanTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'XL'];
-
         const listContainer = document.getElementById('safesList');
-        const totalCount = document.getElementById('totalCount');
-        const newCount = document.getElementById('newCount');
-        const ituranCount = document.getElementById('ituranCount');
-        const returnedCount = document.getElementById('returnedCount');
-        const cancelledCount = document.getElementById('cancelledCount');
-
         const scanBtn = document.getElementById('scanBtn');
         const fileInput = document.getElementById('fileInput');
 
@@ -159,13 +140,13 @@
             renderSafes();
         });
 
-        // פונקציה חכמה שבודקת אם להציג את אפשרות האיתוראן בטופס
         const updateIturanVisibility = () => {
             const type = safeTypeInput.value;
             const status = safeStatusSelect.value;
+            const delayedIturanTypes = ['SDM-100', 'SDM-500', 'SUMMIT'];
+
             if (allowedIturanTypes.includes(type)) {
-                // אם כספת חדשה מסוג SDM-100/500 - נסתיר את האיתוראן מהטופס ונוסיף בהמשך מתוך הרשימה
-                if (status === 'new' && (type === 'SDM-100' || type === 'SDM-500')) {
+                if (status === 'new' && delayedIturanTypes.includes(type)) {
                     ituranWrapper.style.display = 'none';
                     hasIturanInput.checked = false;
                 } else {
@@ -189,10 +170,10 @@
                 safeConditionNotesInput.value = '';
                 incomingFileInput.value = '';
             }
-            updateIturanVisibility(); // עדכון תצוגת איתוראן
+            updateIturanVisibility();
         });
 
-        safeTypeInput.addEventListener('change', updateIturanVisibility); // עדכון תצוגת איתוראן
+        safeTypeInput.addEventListener('change', updateIturanVisibility);
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -240,7 +221,7 @@
                     safeNumber,
                     safeConditionNotes,
                     hasIturan,
-                    hasKnockLock: false, // כברירת מחדל עדיין לא הותקן מנעול נקישות
+                    hasKnockLock: false,
                     incomingImageUrl,
                     isArchived: false,
                     timestamp: serverTimestamp()
@@ -258,7 +239,6 @@
 
         const renderSafes = () => {
             listContainer.innerHTML = '';
-
             const filteredSafes = allSafesData.filter(safe => {
                 if (showingArchive) return safe.data.isArchived === true;
                 return !safe.data.isArchived;
@@ -306,46 +286,46 @@
                 const incomingPhotoLink = data.incomingImageUrl ? `<a href="${data.incomingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ כניסה</a>` : '';
                 const outgoingPhotoLink = data.outgoingImageUrl ? `<a href="${data.outgoingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ יציאה</a>` : '';
 
-                // הצגת תווית איתוראן סטנדרטית (אלא אם זה מהסוג שיש לו כפתורי מתג שמחליפים את התווית)
-                const showStandardIturanBadge = data.hasIturan && !(actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500'));
+                const isKnockLockType = (data.safeType === 'SDM-100' || data.safeType === 'SDM-500');
+                const isDelayedIturanType = (data.safeType === 'SDM-100' || data.safeType === 'SDM-500' || data.safeType === 'SUMMIT');
+                const showStandardIturanBadge = data.hasIturan && !(actualStatus === 'new' && isDelayedIturanType);
 
-                // ממשק מנעול נקישות ואיתוראן לכספות חדשות (SDM-100/500)
                 let togglesUI = '';
-                if (!showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
-                    const isKnockChecked = data.hasKnockLock ? 'checked' : '';
-                    const isIturanChecked = data.hasIturan ? 'checked' : '';
-
-                    togglesUI = `
-                        <div class="mt-3 flex flex-col gap-2">
-                            <!-- מתג מנעול נקישות -->
+                if (!showingArchive && actualStatus === 'new' && (isKnockLockType || isDelayedIturanType)) {
+                    let togglesContent = '';
+                    if (isKnockLockType) {
+                        const isKnockChecked = data.hasKnockLock ? 'checked' : '';
+                        togglesContent += `
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded-lg border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-colors shadow-sm">
                                 <label class="text-sm font-bold text-purple-900 dark:text-purple-300 flex items-center cursor-pointer select-none">
                                     <input type="checkbox" class="knock-lock-checkbox ml-2 w-5 h-5 text-purple-600 bg-white border-purple-300 rounded focus:ring-purple-500 cursor-pointer" data-id="${id}" ${isKnockChecked}>
                                     <span>הותקן מנעול נקישות?</span>
                                 </label>
                                 ${data.hasKnockLock
-                            ? '<span class="text-xs bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
-                            : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
+                                ? '<span class="text-xs bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
+                                : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
                             </div>
-
-                            <!-- מתג איתוראן -->
+                        `;
+                    }
+                    if (isDelayedIturanType) {
+                        const isIturanChecked = data.hasIturan ? 'checked' : '';
+                        togglesContent += `
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center justify-between transition-colors shadow-sm">
                                 <label class="text-sm font-bold text-blue-900 dark:text-blue-300 flex items-center cursor-pointer select-none">
                                     <input type="checkbox" class="ituran-checkbox ml-2 w-5 h-5 text-blue-600 bg-white border-blue-300 rounded focus:ring-blue-500 cursor-pointer" data-id="${id}" ${isIturanChecked}>
                                     <span>הותקן איתוראן?</span>
                                 </label>
                                 ${data.hasIturan
-                            ? '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
-                            : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
+                                ? '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
+                                : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
                             </div>
-                        </div>
-                    `;
-                }
-                // אם הכספת בארכיון
-                else if (showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
+                        `;
+                    }
+                    togglesUI = `<div class="mt-3 flex flex-col gap-2">${togglesContent}</div>`;
+                } else if (showingArchive && actualStatus === 'new') {
                     let archToggles = '';
-                    if (data.hasKnockLock) archToggles += `<div class="mt-1 text-xs text-purple-700 dark:text-purple-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> מנעול נקישות הותקן</div>`;
-                    if (data.hasIturan) archToggles += `<div class="mt-1 text-xs text-blue-700 dark:text-blue-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> איתוראן הותקן</div>`;
+                    if (isKnockLockType && data.hasKnockLock) archToggles += `<div class="mt-1 text-xs text-purple-700 dark:text-purple-400 font-bold flex items-center gap-1">✓ מנעול נקישות הותקן</div>`;
+                    if (isDelayedIturanType && data.hasIturan) archToggles += `<div class="mt-1 text-xs text-blue-700 dark:text-blue-400 font-bold flex items-center gap-1">✓ איתוראן הותקן</div>`;
                     if (archToggles) togglesUI = `<div class="mt-2 bg-slate-50 dark:bg-slate-700 p-2 rounded">${archToggles}</div>`;
                 }
 
@@ -387,39 +367,25 @@
                     </div>
                     <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center text-xs text-slate-500 dark:text-slate-400">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        ${data.isArchived ? daysInRoomText : `בחדר: <span class="font-semibold mr-1">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
+                        ${data.isArchived ? daysInRoomText : `בחדר: <span class="font-semibold mr-1">${daysInRoomText}</span> ${dateString ? `(${dateString})` : ''}`}
                     </div>
                 `;
                 listContainer.appendChild(div);
             });
 
-            // אירועים למנעול נקישות 
             document.querySelectorAll('.knock-lock-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
                     const id = e.target.getAttribute('data-id');
-                    const isChecked = e.target.checked;
-                    try {
-                        await updateDoc(doc(db, 'safes', id), {hasKnockLock: isChecked});
-                    } catch (error) {
-                        console.error("Error updating knock lock: ", error);
-                        alert("שגיאה בעדכון מסד הנתונים.");
-                        e.target.checked = !isChecked;
-                    }
+                    try {await updateDoc(doc(db, 'safes', id), {hasKnockLock: e.target.checked});}
+                    catch (error) {e.target.checked = !e.target.checked; alert("שגיאה בעדכון");}
                 });
             });
 
-            // אירועים לאיתוראן מהרשימה
             document.querySelectorAll('.ituran-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
                     const id = e.target.getAttribute('data-id');
-                    const isChecked = e.target.checked;
-                    try {
-                        await updateDoc(doc(db, 'safes', id), {hasIturan: isChecked});
-                    } catch (error) {
-                        console.error("Error updating ituran: ", error);
-                        alert("שגיאה בעדכון מסד הנתונים.");
-                        e.target.checked = !isChecked;
-                    }
+                    try {await updateDoc(doc(db, 'safes', id), {hasIturan: e.target.checked});}
+                    catch (error) {e.target.checked = !e.target.checked; alert("שגיאה בעדכון");}
                 });
             });
 
@@ -433,11 +399,8 @@
             document.querySelectorAll('.restore-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    if (confirm('להחזיר כספת זו למלאי הפעיל בחדר? (תמונת היציאה תישמר)')) {
-                        await updateDoc(doc(db, 'safes', id), {
-                            isArchived: false,
-                            dispatchedAt: null
-                        });
+                    if (confirm('להחזיר כספת זו למלאי הפעיל? (תמונת היציאה תישמר)')) {
+                        await updateDoc(doc(db, 'safes', id), {isArchived: false, dispatchedAt: null});
                     }
                 });
             });
@@ -451,10 +414,7 @@
         btnSkipPhoto.addEventListener('click', async () => {
             if (!currentDispatchId) return;
             btnSkipPhoto.innerHTML = 'מעדכן...';
-            await updateDoc(doc(db, 'safes', currentDispatchId), {
-                isArchived: true,
-                dispatchedAt: serverTimestamp()
-            });
+            await updateDoc(doc(db, 'safes', currentDispatchId), {isArchived: true, dispatchedAt: serverTimestamp()});
             btnSkipPhoto.innerHTML = 'הוצא ללא תמונה';
             dispatchModal.classList.add('hidden');
         });
@@ -470,34 +430,65 @@
         outgoingFileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file || !currentDispatchId) return;
-
             btnTakeOutgoingPhoto.innerHTML = '⏳ מעלה תמונה...';
-            btnTakeOutgoingPhoto.disabled = true;
-            btnSkipPhoto.disabled = true;
-
+            btnTakeOutgoingPhoto.disabled = true; btnSkipPhoto.disabled = true;
             try {
                 const url = await uploadToImgBB(file);
-                await updateDoc(doc(db, 'safes', currentDispatchId), {
-                    isArchived: true,
-                    dispatchedAt: serverTimestamp(),
-                    outgoingImageUrl: url
-                });
+                await updateDoc(doc(db, 'safes', currentDispatchId), {isArchived: true, dispatchedAt: serverTimestamp(), outgoingImageUrl: url});
                 dispatchModal.classList.add('hidden');
-            } catch (error) {
-                console.error(error);
-                alert("שגיאה בהעלאת תמונת היציאה.");
-            } finally {
+            } catch (error) {alert("שגיאה בהעלאת תמונת היציאה.");}
+            finally {
                 btnTakeOutgoingPhoto.innerHTML = '📸 צלם כספת יוצאת';
-                btnTakeOutgoingPhoto.disabled = false;
-                btnSkipPhoto.disabled = false;
+                btnTakeOutgoingPhoto.disabled = false; btnSkipPhoto.disabled = false;
                 outgoingFileInput.value = '';
             }
         });
 
+        // עדכון סטטיסטיקות מפורט ללשונית דוח מנהלים
+        const updateStatsDashboard = (statsObj) => {
+            // סקירה כללית
+            document.getElementById('statTotal').textContent = statsObj.total;
+            document.getElementById('statNew').textContent = statsObj.newSafes;
+            document.getElementById('statReturned').textContent = statsObj.returned;
+            document.getElementById('statCancelled').textContent = statsObj.cancelled;
+
+            // מלאי לפי דגם
+            const modelsListContainer = document.getElementById('statModelsList');
+            modelsListContainer.innerHTML = '';
+            for (const [type, count] of Object.entries(statsObj.types)) {
+                if (count > 0) {
+                    modelsListContainer.innerHTML += `
+                        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <span class="font-bold text-slate-800 dark:text-slate-200">${type}</span>
+                            <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 px-3 py-1 rounded-full font-black text-sm">${count}</span>
+                        </div>
+                    `;
+                }
+            }
+            if (modelsListContainer.innerHTML === '') modelsListContainer.innerHTML = '<p class="text-sm text-slate-500">אין מלאי פעיל</p>';
+
+            // התקנות SDM 100/500
+            document.getElementById('statSdmReady').textContent = statsObj.sdmReady;
+            document.getElementById('statSdmIturanOnly').textContent = statsObj.sdmIturanOnly;
+            document.getElementById('statSdmKnockOnly').textContent = statsObj.sdmKnockOnly;
+            document.getElementById('statSdmNone').textContent = statsObj.sdmNone;
+
+            // התקנות SUMMIT
+            document.getElementById('statSummitReady').textContent = statsObj.summitReady;
+            document.getElementById('statSummitNone').textContent = statsObj.summitNone;
+        };
+
         const q = query(collection(db, 'safes'), orderBy('timestamp', 'desc'));
         onSnapshot(q, (snapshot) => {
             allSafesData = [];
-            let total = 0, newSafes = 0, ituran = 0, returned = 0, cancelled = 0;
+
+            // אובייקט לאיסוף הסטטיסטיקה לדוח מנהלים
+            let stats = {
+                total: 0, newSafes: 0, returned: 0, cancelled: 0,
+                types: {},
+                sdmReady: 0, sdmIturanOnly: 0, sdmKnockOnly: 0, sdmNone: 0,
+                summitReady: 0, summitNone: 0
+            };
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
@@ -505,21 +496,34 @@
                 allSafesData.push({id, data});
 
                 if (!data.isArchived) {
-                    total++;
+                    stats.total++;
                     let actualStatus = data.originStatus || (data.isNewSafe ? 'new' : (data.returnedFromCustomer ? 'returned' : 'unknown'));
-                    if (actualStatus === 'new') newSafes++;
-                    if (actualStatus === 'returned') returned++;
-                    if (actualStatus === 'cancelled') cancelled++;
-                    if (data.hasIturan) ituran++;
+
+                    if (actualStatus === 'new') stats.newSafes++;
+                    if (actualStatus === 'returned') stats.returned++;
+                    if (actualStatus === 'cancelled') stats.cancelled++;
+
+                    // ספירה לפי דגם
+                    const type = data.safeType || 'אחר';
+                    stats.types[type] = (stats.types[type] || 0) + 1;
+
+                    // חישוב מוכנות התקנות (לכספות חדשות בלבד)
+                    if (actualStatus === 'new') {
+                        if (type === 'SDM-100' || type === 'SDM-500') {
+                            if (data.hasIturan && data.hasKnockLock) stats.sdmReady++;
+                            else if (data.hasIturan && !data.hasKnockLock) stats.sdmIturanOnly++;
+                            else if (!data.hasIturan && data.hasKnockLock) stats.sdmKnockOnly++;
+                            else stats.sdmNone++;
+                        }
+                        if (type === 'SUMMIT') {
+                            if (data.hasIturan) stats.summitReady++;
+                            else stats.summitNone++;
+                        }
+                    }
                 }
             });
 
-            totalCount.textContent = total;
-            newCount.textContent = newSafes;
-            ituranCount.textContent = ituran;
-            returnedCount.textContent = returned;
-            cancelledCount.textContent = cancelled;
-
+            updateStatsDashboard(stats);
             renderSafes();
         });
 
@@ -547,13 +551,13 @@
     </script>
 </head>
 
-<body class="bg-slate-100 dark:bg-slate-900 p-3 md:p-6 font-sans transition-colors duration-300">
-    <div class="max-w-lg mx-auto min-h-screen flex flex-col">
+<body class="bg-slate-100 dark:bg-slate-900 p-2 md:p-6 font-sans transition-colors duration-300">
+    <div class="max-w-xl mx-auto min-h-screen flex flex-col">
 
         <div class="flex-grow">
             <div class="flex justify-end mb-2">
                 <button id="themeToggleBtn"
-                    class="text-sm bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-full font-bold shadow-sm transition-colors">
+                    class="text-xs md:text-sm bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-full font-bold shadow-sm transition-colors">
                     🌙 מצב לילה
                 </button>
             </div>
@@ -561,47 +565,26 @@
             <h1 class="text-2xl md:text-3xl font-black text-center mb-6 text-slate-800 dark:text-white">מערכת ניהול
                 כספות</h1>
 
-            <!-- תפריט הניווט הראשי (לשוניות) -->
-            <div class="flex justify-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
+            <!-- תפריט הניווט הראשי (3 לשוניות) -->
+            <div class="flex justify-between gap-1 md:gap-2 mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
                 <button id="tabAddSafe"
-                    class="bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors text-sm flex items-center gap-2">
-                    ➕ קליטת כספת
+                    class="bg-blue-700 text-white dark:bg-blue-600 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold shadow-sm transition-colors text-xs md:text-sm flex items-center justify-center gap-1 md:gap-2 flex-1">
+                    ➕ קליטה
                 </button>
                 <button id="tabInventory"
-                    class="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors text-sm flex items-center gap-2">
-                    📦 מלאי וארכיון
+                    class="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold shadow-sm transition-colors text-xs md:text-sm flex items-center justify-center gap-1 md:gap-2 flex-1">
+                    📦 מלאי/ארכיון
+                </button>
+                <button id="tabStats"
+                    class="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold shadow-sm transition-colors text-xs md:text-sm flex items-center justify-center gap-1 md:gap-2 flex-1">
+                    📊 דוח מנהלים
                 </button>
             </div>
 
             <!-- ============================== -->
-            <!-- תצוגה 1: טופס הוספה + סטטיסטיקות -->
+            <!-- תצוגה 1: טופס הוספה -->
             <!-- ============================== -->
             <div id="addSafeView">
-
-                <div
-                    class="flex flex-wrap justify-center gap-2 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 text-center transition-colors">
-                    <div class="px-2 py-1">
-                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סה"כ בחדר</p>
-                        <p class="text-xl font-black text-slate-800 dark:text-white" id="totalCount">0</p>
-                    </div>
-                    <div class="px-2 py-1">
-                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">חדשות</p>
-                        <p class="text-xl font-black text-green-600 dark:text-green-400" id="newCount">0</p>
-                    </div>
-                    <div class="px-2 py-1">
-                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">איתוראן</p>
-                        <p class="text-xl font-black text-blue-600 dark:text-blue-400" id="ituranCount">0</p>
-                    </div>
-                    <div class="px-2 py-1">
-                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סיום פעילות</p>
-                        <p class="text-xl font-black text-yellow-600 dark:text-yellow-400" id="returnedCount">0</p>
-                    </div>
-                    <div class="px-2 py-1">
-                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">בוטלו</p>
-                        <p class="text-xl font-black text-orange-600 dark:text-orange-400" id="cancelledCount">0</p>
-                    </div>
-                </div>
-
                 <form id="addSafeForm"
                     class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 border-t-4 border-t-blue-600 dark:border-t-blue-500 mb-8 transition-colors">
 
@@ -699,7 +682,6 @@
                         </div>
                     </div>
 
-                    <!-- אופציית איתוראן בטופס הקליטה תוסתר אוטומטית עבור כספות חדשות -->
                     <div id="ituranWrapper" style="display: none;"
                         class="mb-6 flex items-center bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-4 rounded-lg">
                         <input type="checkbox" id="hasIturan"
@@ -716,12 +698,10 @@
                 </form>
             </div>
 
-
             <!-- ============================== -->
             <!-- תצוגה 2: רשימות (מוסתר כברירת מחדל) -->
             <!-- ============================== -->
             <div id="inventoryView" class="hidden">
-
                 <div
                     class="flex justify-between items-center mb-4 border-b-2 border-slate-200 dark:border-slate-700 pb-2">
                     <h2 id="listTitle" class="text-xl font-black text-slate-800 dark:text-white">
@@ -732,12 +712,120 @@
                         🗄️ היסטוריית יציאות (ארכיון)
                     </button>
                 </div>
-
                 <div id="safesList" class="space-y-3">
                     <!-- הרשימה תתרנדר כאן -->
                 </div>
             </div>
-            <!-- סוף תצוגה 2 -->
+
+            <!-- ============================== -->
+            <!-- תצוגה 3: דוח מנהלים / סטטיסטיקה -->
+            <!-- ============================== -->
+            <div id="statsView" class="hidden space-y-4">
+
+                <!-- סקירה כללית -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3
+                        class="text-lg font-black text-slate-800 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                        סקירה כללית (בחדר)</h3>
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div
+                            class="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg border border-slate-100 dark:border-slate-600">
+                            <p class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">סה"כ במלאי הפעיל</p>
+                            <p class="text-2xl font-black text-slate-800 dark:text-white" id="statTotal">0</p>
+                        </div>
+                        <div
+                            class="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
+                            <p class="text-green-700 dark:text-green-400 text-xs font-bold mb-1">חדשות מהניילון</p>
+                            <p class="text-2xl font-black text-green-700 dark:text-green-400" id="statNew">0</p>
+                        </div>
+                        <div
+                            class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                            <p class="text-yellow-700 dark:text-yellow-400 text-xs font-bold mb-1">חזרו (סיום פעילות)
+                            </p>
+                            <p class="text-2xl font-black text-yellow-700 dark:text-yellow-400" id="statReturned">0</p>
+                        </div>
+                        <div
+                            class="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-800">
+                            <p class="text-orange-700 dark:text-orange-400 text-xs font-bold mb-1">חזרו (בוטלו)</p>
+                            <p class="text-2xl font-black text-orange-700 dark:text-orange-400" id="statCancelled">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- סטטוס התקנות מדויק -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3
+                        class="text-lg font-black text-slate-800 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                        דוח התקנות (לכספות חדשות בלבד)</h3>
+
+                    <!-- בלוק SDM 100/500 -->
+                    <div class="mb-4">
+                        <h4
+                            class="font-bold text-sm text-slate-700 dark:text-slate-300 mb-2 bg-slate-100 dark:bg-slate-700 p-2 rounded">
+                            כספות מסוג: SDM-100 / SDM-500</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li
+                                class="flex justify-between items-center bg-green-50 dark:bg-green-900/10 p-2 rounded border border-green-100 dark:border-green-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">✅ מוכנות לחלוטין (איתוראן +
+                                    נקישות):</span>
+                                <span class="font-bold text-green-700 dark:text-green-400" id="statSdmReady">0</span>
+                            </li>
+                            <li
+                                class="flex justify-between items-center bg-blue-50 dark:bg-blue-900/10 p-2 rounded border border-blue-100 dark:border-blue-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">📡 רק איתוראן הותקן (ממתין
+                                    לנקישות):</span>
+                                <span class="font-bold text-blue-700 dark:text-blue-400" id="statSdmIturanOnly">0</span>
+                            </li>
+                            <li
+                                class="flex justify-between items-center bg-purple-50 dark:bg-purple-900/10 p-2 rounded border border-purple-100 dark:border-purple-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">🔒 רק נקישות הותקן (ממתין
+                                    לאיתוראן):</span>
+                                <span class="font-bold text-purple-700 dark:text-purple-400"
+                                    id="statSdmKnockOnly">0</span>
+                            </li>
+                            <li
+                                class="flex justify-between items-center bg-red-50 dark:bg-red-900/10 p-2 rounded border border-red-100 dark:border-red-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">⏳ טרם הותקנו תוספות (חסר איתוראן
+                                    ונקישות):</span>
+                                <span class="font-bold text-red-700 dark:text-red-400" id="statSdmNone">0</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- בלוק SUMMIT -->
+                    <div>
+                        <h4
+                            class="font-bold text-sm text-slate-700 dark:text-slate-300 mb-2 bg-slate-100 dark:bg-slate-700 p-2 rounded">
+                            כספות מסוג: SUMMIT</h4>
+                        <ul class="space-y-2 text-sm">
+                            <li
+                                class="flex justify-between items-center bg-green-50 dark:bg-green-900/10 p-2 rounded border border-green-100 dark:border-green-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">✅ מוכנות להתקנה (איתוראן הותקן):</span>
+                                <span class="font-bold text-green-700 dark:text-green-400" id="statSummitReady">0</span>
+                            </li>
+                            <li
+                                class="flex justify-between items-center bg-red-50 dark:bg-red-900/10 p-2 rounded border border-red-100 dark:border-red-900/30">
+                                <span class="text-slate-700 dark:text-slate-300">⏳ טרם הותקן (ממתין לאיתוראן):</span>
+                                <span class="font-bold text-red-700 dark:text-red-400" id="statSummitNone">0</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- מלאי לפי דגם -->
+                <div
+                    class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3
+                        class="text-lg font-black text-slate-800 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                        מלאי פעיל לפי דגם</h3>
+                    <div id="statModelsList" class="space-y-2">
+                        <!-- מתמלא אוטומטית -->
+                    </div>
+                </div>
+
+            </div>
 
         </div>
 
