@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול מלאי כספות</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ספריית Tesseract.js לסריקת התמונה -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <script type="module">
+        import {initializeApp} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import {getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+        import {getAuth, signInAnonymously} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+        // נתוני ההתחברות שלך למסד הנתונים
+        const firebaseConfig = {
+            apiKey: "AIzaSyADKnPSG7zHuQn5HAu_NteM8lKK1OTZUjM",
+            authDomain: "safesmanager.firebaseapp.com",
+            projectId: "safesmanager",
+            storageBucket: "safesmanager.firebasestorage.app",
+            messagingSenderId: "33764610196",
+            appId: "1:33764610196:web:7f68e9f0b7c4e3eb62a481"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // התחברות אנונימית ברקע
+        signInAnonymously(auth).catch((error) => {
+            console.error("Error signing in: ", error);
+            alert("שגיאת התחברות. ודא שהפעלת Authentication אנונימי ב-Firebase.");
+        });
+
+        // חיבור אלמנטים מה-HTML
+        const form = document.getElementById('addSafeForm');
+        const serialInput = document.getElementById('serialNumber');
+        const safeTypeInput = document.getElementById('safeType');
+        const isNewSafeInput = document.getElementById('isNewSafe');
+        const hasIturanInput = document.getElementById('hasIturan');
+        const returnedInput = document.getElementById('returnedFromCustomer');
+        const listContainer = document.getElementById('safesList');
+
+        // מוני סטטיסטיקות
+        const totalCount = document.getElementById('totalCount');
+        const newCount = document.getElementById('newCount');
+        const ituranCount = document.getElementById('ituranCount');
+        const returnedCount = document.getElementById('returnedCount');
+
+        const scanBtn = document.getElementById('scanBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // שליחת טופס להוספת כספת
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const serialNumber = serialInput.value.trim();
+            const safeType = safeTypeInput.value;
+            const isNewSafe = isNewSafeInput.checked;
+            const hasIturan = hasIturanInput.checked;
+            const returnedFromCustomer = returnedInput.checked;
+
+            if (!serialNumber) {
+                alert('נא להזין או לסרוק מספר סידורי.');
+                return;
+            }
+            if (!safeType) {
+                alert('נא לבחור סוג כספת.');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, 'safes'), {
+                    serialNumber,
+                    safeType,
+                    isNewSafe,
+                    hasIturan,
+                    returnedFromCustomer,
+                    timestamp: serverTimestamp()
+                });
+                form.reset();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert("שגיאה בהוספת הכספת. ודא שמסד הנתונים במצב Test Mode.");
+            }
+        });
+
+        // האזנה בזמן אמת למסד הנתונים והצגת הכספות
+        const q = query(collection(db, 'safes'), orderBy('timestamp', 'desc'));
+        onSnapshot(q, (snapshot) => {
+            listContainer.innerHTML = '';
+            let total = 0;
+            let newSafes = 0;
+            let ituran = 0;
+            let returned = 0;
+
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                total++;
+                if (data.isNewSafe) newSafes++;
+                if (data.hasIturan) ituran++;
+                if (data.returnedFromCustomer) returned++;
+
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded shadow mb-2 flex justify-between items-center";
+                div.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800">${data.serialNumber}</h3>
+                        <p class="text-sm text-gray-600 mb-1">סוג: <span class="font-semibold">${data.safeType}</span></p>
+                        <div class="flex gap-2 mt-1">
+                            ${data.isNewSafe ? '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded border border-green-200">חדשה</span>' : ''}
+                            ${data.hasIturan ? '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded border border-blue-200">איתוראן</span>' : ''}
+                            ${data.returnedFromCustomer ? '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded border border-yellow-200">חזרה מלקוח</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700 delete-btn bg-red-50 p-2 rounded-full transition-colors" data-id="${id}" title="מחק / יציאה ללקוח">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                `;
+                listContainer.appendChild(div);
+            });
+
+            // הפעלת כפתורי המחיקה
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (confirm('האם אתה בטוח שברצונך למחוק כספת זו מהמלאי (יציאה ללקוח)?')) {
+                        await deleteDoc(doc(db, 'safes', id));
+                    }
+                });
+            });
+
+            totalCount.textContent = total;
+            newCount.textContent = newSafes;
+            ituranCount.textContent = ituran;
+            returnedCount.textContent = returned;
+        });
+
+        // לוגיקה של זיהוי הטקסט מהתמונה (OCR)
+        scanBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            serialInput.value = "סורק תמונה, אנא המתן...";
+            scanBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'eng', {
+                    logger: m => console.log(m)
+                });
+                // ניקוי הטקסט - השארת אותיות ומספרים בלבד
+                const cleaned = result.data.text.replace(/[^a-zA-Z0-9]/g, '');
+                serialInput.value = cleaned;
+            } catch (error) {
+                console.error(error);
+                serialInput.value = "";
+                alert("שגיאה בסריקת התמונה. נסה שוב עם תמונה ברורה יותר.");
+            } finally {
+                scanBtn.disabled = false;
+                fileInput.value = "";
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-100 p-4 font-sans">
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">מערכת ניהול כספות</h1>
+
+        <!-- סטטיסטיקות מלאי -->
+        <div class="grid grid-cols-4 gap-2 bg-white p-3 rounded shadow-md mb-6 text-center">
+            <div>
+                <p class="text-gray-500 text-xs font-bold">סה"כ</p>
+                <p class="text-xl font-black text-gray-800" id="totalCount">0</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-xs font-bold">חדשות</p>
+                <p class="text-xl font-black text-green-600" id="newCount">0</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-xs font-bold">איתוראן</p>
+                <p class="text-xl font-black text-blue-600" id="ituranCount">0</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-xs font-bold">הוחזרו</p>
+                <p class="text-xl font-black text-yellow-600" id="returnedCount">0</p>
+            </div>
+        </div>
+
+        <!-- טופס הוספת כספת -->
+        <form id="addSafeForm" class="bg-white p-6 rounded shadow-md mb-6 border-t-4 border-blue-500">
+
+            <div class="mb-4 relative">
+                <label class="block text-gray-700 text-sm font-bold mb-2">מספר סידורי</label>
+                <div class="flex items-center relative">
+                    <input type="text" id="serialNumber"
+                        class="shadow appearance-none border rounded w-full py-3 pr-3 pl-12 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="הקלד או צלם ברקוד...">
+                    <button type="button" id="scanBtn"
+                        class="absolute left-2 top-2 bg-blue-100 p-1.5 rounded text-blue-600 hover:bg-blue-200 transition-colors"
+                        title="צלם מספר סידורי">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                    <!-- שדה נסתר לפתיחת המצלמה בנייד -->
+                    <input type="file" id="fileInput" accept="image/*" capture="environment" class="hidden">
+                </div>
+            </div>
+
+            <!-- שדה סוג כספת -->
+            <div class="mb-5">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="safeType">סוג כספת</label>
+                <div class="relative">
+                    <select id="safeType"
+                        class="shadow appearance-none border rounded w-full py-3 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        required>
+                        <option value="" disabled selected>בחר סוג כספת...</option>
+                        <option value="SDM-100">SDM-100</option>
+                        <option value="SDM-500">SDM-500</option>
+                        <option value="SUMMIT">SUMMIT</option>
+                        <option value="CDS">CDS</option>
+                        <option value="CD-5">CD-5</option>
+                        <option value="CD-7">CD-7</option>
+                        <option value="XL">XL</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-4 flex items-center bg-gray-50 p-3 rounded">
+                <input type="checkbox" id="isNewSafe"
+                    class="ml-3 w-5 h-5 text-green-600 border-gray-300 rounded cursor-pointer">
+                <label for="isNewSafe" class="text-gray-700 font-bold cursor-pointer select-none">כספת חדשה</label>
+            </div>
+
+            <div class="mb-4 flex items-center bg-gray-50 p-3 rounded">
+                <input type="checkbox" id="hasIturan"
+                    class="ml-3 w-5 h-5 text-blue-600 border-gray-300 rounded cursor-pointer">
+                <label for="hasIturan" class="text-gray-700 font-bold cursor-pointer select-none">כולל מערכת
+                    איתוראן</label>
+            </div>
+
+            <div class="mb-6 flex items-center bg-gray-50 p-3 rounded">
+                <input type="checkbox" id="returnedFromCustomer"
+                    class="ml-3 w-5 h-5 text-yellow-600 border-gray-300 rounded cursor-pointer">
+                <label for="returnedFromCustomer" class="text-gray-700 font-bold cursor-pointer select-none">חזרה
+                    מלקוח</label>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300">
+                הוסף למלאי הכספות
+            </button>
+        </form>
+
+        <!-- רשימת הכספות -->
+        <div>
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">מלאי כספות בחדר</h2>
+            <div id="safesList" class="space-y-3">
+                <!-- Data will be populated here -->
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
