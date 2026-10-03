@@ -15,7 +15,7 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f;";
+        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f";
         // ===================================
 
         import {initializeApp} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
@@ -115,7 +115,7 @@
         const returnDetailsDiv = document.getElementById('returnDetailsDiv');
         const customerNameInput = document.getElementById('customerName');
         const safeNumberInput = document.getElementById('safeNumber');
-        const safeConditionNotesInput = document.getElementById('safeConditionNotes'); // השדה החדש להערות
+        const safeConditionNotesInput = document.getElementById('safeConditionNotes');
         const incomingFileInput = document.getElementById('incomingFileInput');
 
         const ituranWrapper = document.getElementById('ituranWrapper');
@@ -169,7 +169,7 @@
                 customerNameInput.required = false;
                 customerNameInput.value = '';
                 safeNumberInput.value = '';
-                safeConditionNotesInput.value = ''; // איפוס הערות
+                safeConditionNotesInput.value = '';
                 incomingFileInput.value = '';
             }
         });
@@ -190,7 +190,7 @@
             const originStatus = safeStatusSelect.value;
             const customerName = customerNameInput.value.trim();
             const safeNumber = safeNumberInput.value.trim();
-            const safeConditionNotes = safeConditionNotesInput.value.trim(); // קריאת ההערות
+            const safeConditionNotes = safeConditionNotesInput.value.trim();
             const hasIturan = hasIturanInput.checked;
 
             if (!serialNumber || !safeType || !originStatus) {
@@ -227,8 +227,9 @@
                     originStatus,
                     customerName,
                     safeNumber,
-                    safeConditionNotes, // שמירת ההערות למסד הנתונים
+                    safeConditionNotes,
                     hasIturan,
+                    hasKnockLock: false, // כברירת מחדל עדיין לא הותקן מנעול נקישות
                     incomingImageUrl,
                     isArchived: false,
                     timestamp: serverTimestamp()
@@ -289,12 +290,33 @@
 
                 const customerDisplay = data.customerName ? `<p class="text-sm text-slate-700 dark:text-slate-300 mt-1">לקוח: <span class="font-bold">${data.customerName}</span></p>` : '';
                 const safeNumberDisplay = data.safeNumber ? `<p class="text-sm text-slate-700 dark:text-slate-300">מספר כספת: <span class="font-bold text-indigo-700 dark:text-indigo-400">${data.safeNumber}</span></p>` : '';
-
-                // תצוגת ההערות (אם הוקלדו הערות)
                 const notesDisplay = data.safeConditionNotes ? `<div class="mt-2 text-sm bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 p-2.5 rounded border border-amber-200 dark:border-amber-800 shadow-sm"><span class="font-bold">📝 הערות קליטה:</span> ${data.safeConditionNotes}</div>` : '';
 
                 const incomingPhotoLink = data.incomingImageUrl ? `<a href="${data.incomingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ כניסה</a>` : '';
                 const outgoingPhotoLink = data.outgoingImageUrl ? `<a href="${data.outgoingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ יציאה</a>` : '';
+
+                // ממשק מנעול נקישות - מוצג רק לכספות חדשות מסוג SDM-100/500 במלאי הפעיל
+                let knockLockUI = '';
+                if (!showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
+                    const isChecked = data.hasKnockLock ? 'checked' : '';
+                    knockLockUI = `
+                        <div class="mt-3 bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded-lg border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-colors shadow-sm">
+                            <label class="text-sm font-bold text-purple-900 dark:text-purple-300 flex items-center cursor-pointer select-none">
+                                <input type="checkbox" class="knock-lock-checkbox ml-2 w-5 h-5 text-purple-600 bg-white border-purple-300 rounded focus:ring-purple-500 cursor-pointer" data-id="${id}" ${isChecked}>
+                                <span>הותקן מנעול נקישות?</span>
+                            </label>
+                            ${data.hasKnockLock
+                            ? '<span class="text-xs bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
+                            : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
+                        </div>
+                    `;
+                }
+                // אם הכספת בארכיון, רק מציגים את הסטטוס בלי יכולת לערוך
+                else if (showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
+                    if (data.hasKnockLock) {
+                        knockLockUI = `<div class="mt-2 text-xs text-purple-700 dark:text-purple-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> מנעול נקישות הותקן</div>`;
+                    }
+                }
 
                 const actionButton = showingArchive
                     ? `<button class="text-green-500 hover:text-green-700 restore-btn bg-green-50 dark:bg-green-900 p-2 rounded-full transition-colors" data-id="${id}" title="החזר למלאי הפעיל">
@@ -315,7 +337,7 @@
                             <div class="bg-slate-50 dark:bg-slate-700 p-2 rounded mt-2 mb-2 ${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'hidden' : ''}">
                                 ${customerDisplay}
                                 ${safeNumberDisplay}
-                                ${notesDisplay} <!-- הוספת שורת ההערות כאן -->
+                                ${notesDisplay}
                                 <div class="flex gap-2 mt-2">
                                     ${incomingPhotoLink}
                                     ${outgoingPhotoLink}
@@ -327,6 +349,8 @@
                                 ${data.hasIturan ? '<span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-xs px-2 py-1 rounded border border-blue-200 dark:border-blue-800">איתוראן</span>' : ''}
                                 ${data.isArchived ? '<span class="bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200 text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-500">ארכיון</span>' : ''}
                             </div>
+                            
+                            ${knockLockUI} <!-- תוספת הממשק למנעול נקישות -->
                         </div>
                         ${actionButton}
                     </div>
@@ -336,6 +360,23 @@
                     </div>
                 `;
                 listContainer.appendChild(div);
+            });
+
+            // אירועים למנעול נקישות (שומר נתונים מיד בעת הסימון ב-V)
+            document.querySelectorAll('.knock-lock-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const isChecked = e.target.checked;
+                    try {
+                        await updateDoc(doc(db, 'safes', id), {
+                            hasKnockLock: isChecked
+                        });
+                    } catch (error) {
+                        console.error("Error updating knock lock: ", error);
+                        alert("שגיאה בעדכון מסד הנתונים.");
+                        e.target.checked = !isChecked; // ביטול הסימון במקרה של שגיאה
+                    }
+                });
             });
 
             document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -583,7 +624,6 @@
                         </select>
                     </div>
 
-                    <!-- אזור החזרה עם השדה החדש -->
                     <div id="returnDetailsDiv"
                         class="mb-5 hidden bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
                         <div class="mb-3">
@@ -600,8 +640,6 @@
                                 class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
                                 placeholder="הזן מספר כספת אם קיים">
                         </div>
-
-                        <!-- השדה החדש להערות טכנאי -->
                         <div class="mb-3">
                             <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">הערות טכנאי /
                                 מצב הכספת (אופציונלי)</label>
@@ -609,7 +647,6 @@
                                 class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
                                 placeholder="לדוגמה: שריטות בדלת, חסר מפתח..."></textarea>
                         </div>
-
                         <div>
                             <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">צילום כספת
                                 נכנסת (אופציונלי)</label>
