@@ -15,7 +15,7 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f";
+        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f;";
         // ===================================
 
         import {initializeApp} from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
@@ -80,13 +80,11 @@
             addSafeView.classList.remove('hidden');
             inventoryView.classList.add('hidden');
 
-            // עיצוב כפתור פעיל
             tabAddSafe.classList.replace('bg-slate-200', 'bg-blue-700');
             tabAddSafe.classList.replace('text-slate-700', 'text-white');
             tabAddSafe.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
             tabAddSafe.classList.replace('dark:text-slate-300', 'dark:text-white');
 
-            // עיצוב כפתור לא פעיל
             tabInventory.classList.replace('bg-blue-700', 'bg-slate-200');
             tabInventory.classList.replace('text-white', 'text-slate-700');
             tabInventory.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
@@ -97,13 +95,11 @@
             inventoryView.classList.remove('hidden');
             addSafeView.classList.add('hidden');
 
-            // עיצוב כפתור פעיל
             tabInventory.classList.replace('bg-slate-200', 'bg-blue-700');
             tabInventory.classList.replace('text-slate-700', 'text-white');
             tabInventory.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
             tabInventory.classList.replace('dark:text-slate-300', 'dark:text-white');
 
-            // עיצוב כפתור לא פעיל
             tabAddSafe.classList.replace('bg-blue-700', 'bg-slate-200');
             tabAddSafe.classList.replace('text-white', 'text-slate-700');
             tabAddSafe.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
@@ -119,6 +115,7 @@
         const returnDetailsDiv = document.getElementById('returnDetailsDiv');
         const customerNameInput = document.getElementById('customerName');
         const safeNumberInput = document.getElementById('safeNumber');
+        const safeConditionNotesInput = document.getElementById('safeConditionNotes'); // השדה החדש להערות
         const incomingFileInput = document.getElementById('incomingFileInput');
 
         const ituranWrapper = document.getElementById('ituranWrapper');
@@ -155,7 +152,7 @@
                 viewArchiveBtn.classList.replace('text-slate-700', 'text-blue-800');
                 listTitle.innerHTML = '📦 היסטוריית כספות שיצאו (ארכיון)';
             } else {
-                viewArchiveBtn.innerHTML = '🗄️️ היסטוריית יציאות (ארכיון)';
+                viewArchiveBtn.innerHTML = '🗄️ היסטוריית יציאות (ארכיון)';
                 viewArchiveBtn.classList.replace('bg-blue-100', 'bg-slate-200');
                 viewArchiveBtn.classList.replace('text-blue-800', 'text-slate-700');
                 listTitle.innerHTML = 'מלאי כספות נוכחי';
@@ -172,6 +169,7 @@
                 customerNameInput.required = false;
                 customerNameInput.value = '';
                 safeNumberInput.value = '';
+                safeConditionNotesInput.value = ''; // איפוס הערות
                 incomingFileInput.value = '';
             }
         });
@@ -192,6 +190,7 @@
             const originStatus = safeStatusSelect.value;
             const customerName = customerNameInput.value.trim();
             const safeNumber = safeNumberInput.value.trim();
+            const safeConditionNotes = safeConditionNotesInput.value.trim(); // קריאת ההערות
             const hasIturan = hasIturanInput.checked;
 
             if (!serialNumber || !safeType || !originStatus) {
@@ -228,6 +227,7 @@
                     originStatus,
                     customerName,
                     safeNumber,
+                    safeConditionNotes, // שמירת ההערות למסד הנתונים
                     hasIturan,
                     incomingImageUrl,
                     isArchived: false,
@@ -290,6 +290,9 @@
                 const customerDisplay = data.customerName ? `<p class="text-sm text-slate-700 dark:text-slate-300 mt-1">לקוח: <span class="font-bold">${data.customerName}</span></p>` : '';
                 const safeNumberDisplay = data.safeNumber ? `<p class="text-sm text-slate-700 dark:text-slate-300">מספר כספת: <span class="font-bold text-indigo-700 dark:text-indigo-400">${data.safeNumber}</span></p>` : '';
 
+                // תצוגת ההערות (אם הוקלדו הערות)
+                const notesDisplay = data.safeConditionNotes ? `<div class="mt-2 text-sm bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 p-2.5 rounded border border-amber-200 dark:border-amber-800 shadow-sm"><span class="font-bold">📝 הערות קליטה:</span> ${data.safeConditionNotes}</div>` : '';
+
                 const incomingPhotoLink = data.incomingImageUrl ? `<a href="${data.incomingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ כניסה</a>` : '';
                 const outgoingPhotoLink = data.outgoingImageUrl ? `<a href="${data.outgoingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ יציאה</a>` : '';
 
@@ -305,13 +308,14 @@
                 div.className = "bg-white dark:bg-slate-800 p-4 rounded shadow-sm border border-slate-200 dark:border-slate-700 mb-3 relative overflow-hidden transition-colors";
                 div.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <div>
+                        <div class="w-full pr-2">
                             <h3 class="font-black text-xl text-slate-800 dark:text-white tracking-wide">${data.serialNumber}</h3>
                             <p class="text-sm text-slate-600 dark:text-slate-400 mb-1">סוג: <span class="font-semibold text-blue-700 dark:text-blue-400">${data.safeType || 'לא צוין'}</span></p>
                             
-                            <div class="bg-slate-50 dark:bg-slate-700 p-2 rounded mt-2 mb-2 ${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink) ? 'hidden' : ''}">
+                            <div class="bg-slate-50 dark:bg-slate-700 p-2 rounded mt-2 mb-2 ${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'hidden' : ''}">
                                 ${customerDisplay}
                                 ${safeNumberDisplay}
+                                ${notesDisplay} <!-- הוספת שורת ההערות כאן -->
                                 <div class="flex gap-2 mt-2">
                                     ${incomingPhotoLink}
                                     ${outgoingPhotoLink}
@@ -579,6 +583,7 @@
                         </select>
                     </div>
 
+                    <!-- אזור החזרה עם השדה החדש -->
                     <div id="returnDetailsDiv"
                         class="mb-5 hidden bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
                         <div class="mb-3">
@@ -595,6 +600,16 @@
                                 class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
                                 placeholder="הזן מספר כספת אם קיים">
                         </div>
+
+                        <!-- השדה החדש להערות טכנאי -->
+                        <div class="mb-3">
+                            <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">הערות טכנאי /
+                                מצב הכספת (אופציונלי)</label>
+                            <textarea id="safeConditionNotes" rows="2"
+                                class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
+                                placeholder="לדוגמה: שריטות בדלת, חסר מפתח..."></textarea>
+                        </div>
+
                         <div>
                             <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">צילום כספת
                                 נכנסת (אופציונלי)</label>
