@@ -105,7 +105,6 @@
             tabAddSafe.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
             tabAddSafe.classList.replace('dark:text-white', 'dark:text-slate-300');
         });
-        // ------------------------------
 
         const form = document.getElementById('addSafeForm');
         const submitBtn = document.getElementById('submitBtn');
@@ -160,6 +159,24 @@
             renderSafes();
         });
 
+        // פונקציה חכמה שבודקת אם להציג את אפשרות האיתוראן בטופס
+        const updateIturanVisibility = () => {
+            const type = safeTypeInput.value;
+            const status = safeStatusSelect.value;
+            if (allowedIturanTypes.includes(type)) {
+                // אם כספת חדשה מסוג SDM-100/500 - נסתיר את האיתוראן מהטופס ונוסיף בהמשך מתוך הרשימה
+                if (status === 'new' && (type === 'SDM-100' || type === 'SDM-500')) {
+                    ituranWrapper.style.display = 'none';
+                    hasIturanInput.checked = false;
+                } else {
+                    ituranWrapper.style.display = 'flex';
+                }
+            } else {
+                ituranWrapper.style.display = 'none';
+                hasIturanInput.checked = false;
+            }
+        };
+
         safeStatusSelect.addEventListener('change', (e) => {
             if (e.target.value === 'returned' || e.target.value === 'cancelled') {
                 returnDetailsDiv.classList.remove('hidden');
@@ -172,16 +189,10 @@
                 safeConditionNotesInput.value = '';
                 incomingFileInput.value = '';
             }
+            updateIturanVisibility(); // עדכון תצוגת איתוראן
         });
 
-        safeTypeInput.addEventListener('change', (e) => {
-            if (allowedIturanTypes.includes(e.target.value)) {
-                ituranWrapper.style.display = 'flex';
-            } else {
-                ituranWrapper.style.display = 'none';
-                hasIturanInput.checked = false;
-            }
-        });
+        safeTypeInput.addEventListener('change', updateIturanVisibility); // עדכון תצוגת איתוראן
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -295,27 +306,47 @@
                 const incomingPhotoLink = data.incomingImageUrl ? `<a href="${data.incomingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ כניסה</a>` : '';
                 const outgoingPhotoLink = data.outgoingImageUrl ? `<a href="${data.outgoingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ יציאה</a>` : '';
 
-                // ממשק מנעול נקישות - מוצג רק לכספות חדשות מסוג SDM-100/500 במלאי הפעיל
-                let knockLockUI = '';
+                // הצגת תווית איתוראן סטנדרטית (אלא אם זה מהסוג שיש לו כפתורי מתג שמחליפים את התווית)
+                const showStandardIturanBadge = data.hasIturan && !(actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500'));
+
+                // ממשק מנעול נקישות ואיתוראן לכספות חדשות (SDM-100/500)
+                let togglesUI = '';
                 if (!showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
-                    const isChecked = data.hasKnockLock ? 'checked' : '';
-                    knockLockUI = `
-                        <div class="mt-3 bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded-lg border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-colors shadow-sm">
-                            <label class="text-sm font-bold text-purple-900 dark:text-purple-300 flex items-center cursor-pointer select-none">
-                                <input type="checkbox" class="knock-lock-checkbox ml-2 w-5 h-5 text-purple-600 bg-white border-purple-300 rounded focus:ring-purple-500 cursor-pointer" data-id="${id}" ${isChecked}>
-                                <span>הותקן מנעול נקישות?</span>
-                            </label>
-                            ${data.hasKnockLock
+                    const isKnockChecked = data.hasKnockLock ? 'checked' : '';
+                    const isIturanChecked = data.hasIturan ? 'checked' : '';
+
+                    togglesUI = `
+                        <div class="mt-3 flex flex-col gap-2">
+                            <!-- מתג מנעול נקישות -->
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-2.5 rounded-lg border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-colors shadow-sm">
+                                <label class="text-sm font-bold text-purple-900 dark:text-purple-300 flex items-center cursor-pointer select-none">
+                                    <input type="checkbox" class="knock-lock-checkbox ml-2 w-5 h-5 text-purple-600 bg-white border-purple-300 rounded focus:ring-purple-500 cursor-pointer" data-id="${id}" ${isKnockChecked}>
+                                    <span>הותקן מנעול נקישות?</span>
+                                </label>
+                                ${data.hasKnockLock
                             ? '<span class="text-xs bg-purple-200 text-purple-800 dark:bg-purple-800 dark:text-purple-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
                             : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
+                            </div>
+
+                            <!-- מתג איתוראן -->
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center justify-between transition-colors shadow-sm">
+                                <label class="text-sm font-bold text-blue-900 dark:text-blue-300 flex items-center cursor-pointer select-none">
+                                    <input type="checkbox" class="ituran-checkbox ml-2 w-5 h-5 text-blue-600 bg-white border-blue-300 rounded focus:ring-blue-500 cursor-pointer" data-id="${id}" ${isIturanChecked}>
+                                    <span>הותקן איתוראן?</span>
+                                </label>
+                                ${data.hasIturan
+                            ? '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 px-2 py-1 rounded font-bold tracking-wide">✓ הותקן</span>'
+                            : '<span class="text-xs bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 px-2 py-1 rounded">ממתין להתקנה</span>'}
+                            </div>
                         </div>
                     `;
                 }
-                // אם הכספת בארכיון, רק מציגים את הסטטוס בלי יכולת לערוך
+                // אם הכספת בארכיון
                 else if (showingArchive && actualStatus === 'new' && (data.safeType === 'SDM-100' || data.safeType === 'SDM-500')) {
-                    if (data.hasKnockLock) {
-                        knockLockUI = `<div class="mt-2 text-xs text-purple-700 dark:text-purple-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> מנעול נקישות הותקן</div>`;
-                    }
+                    let archToggles = '';
+                    if (data.hasKnockLock) archToggles += `<div class="mt-1 text-xs text-purple-700 dark:text-purple-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> מנעול נקישות הותקן</div>`;
+                    if (data.hasIturan) archToggles += `<div class="mt-1 text-xs text-blue-700 dark:text-blue-400 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> איתוראן הותקן</div>`;
+                    if (archToggles) togglesUI = `<div class="mt-2 bg-slate-50 dark:bg-slate-700 p-2 rounded">${archToggles}</div>`;
                 }
 
                 const actionButton = showingArchive
@@ -346,11 +377,11 @@
                             
                             <div class="flex flex-wrap gap-2 mt-2">
                                 ${statusBadge}
-                                ${data.hasIturan ? '<span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-xs px-2 py-1 rounded border border-blue-200 dark:border-blue-800">איתוראן</span>' : ''}
+                                ${showStandardIturanBadge ? '<span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 text-xs px-2 py-1 rounded border border-blue-200 dark:border-blue-800">איתוראן</span>' : ''}
                                 ${data.isArchived ? '<span class="bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200 text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-500">ארכיון</span>' : ''}
                             </div>
                             
-                            ${knockLockUI} <!-- תוספת הממשק למנעול נקישות -->
+                            ${togglesUI}
                         </div>
                         ${actionButton}
                     </div>
@@ -362,19 +393,32 @@
                 listContainer.appendChild(div);
             });
 
-            // אירועים למנעול נקישות (שומר נתונים מיד בעת הסימון ב-V)
+            // אירועים למנעול נקישות 
             document.querySelectorAll('.knock-lock-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', async (e) => {
                     const id = e.target.getAttribute('data-id');
                     const isChecked = e.target.checked;
                     try {
-                        await updateDoc(doc(db, 'safes', id), {
-                            hasKnockLock: isChecked
-                        });
+                        await updateDoc(doc(db, 'safes', id), {hasKnockLock: isChecked});
                     } catch (error) {
                         console.error("Error updating knock lock: ", error);
                         alert("שגיאה בעדכון מסד הנתונים.");
-                        e.target.checked = !isChecked; // ביטול הסימון במקרה של שגיאה
+                        e.target.checked = !isChecked;
+                    }
+                });
+            });
+
+            // אירועים לאיתוראן מהרשימה
+            document.querySelectorAll('.ituran-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const isChecked = e.target.checked;
+                    try {
+                        await updateDoc(doc(db, 'safes', id), {hasIturan: isChecked});
+                    } catch (error) {
+                        console.error("Error updating ituran: ", error);
+                        alert("שגיאה בעדכון מסד הנתונים.");
+                        e.target.checked = !isChecked;
                     }
                 });
             });
@@ -655,6 +699,7 @@
                         </div>
                     </div>
 
+                    <!-- אופציית איתוראן בטופס הקליטה תוסתר אוטומטית עבור כספות חדשות -->
                     <div id="ituranWrapper" style="display: none;"
                         class="mb-6 flex items-center bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-4 rounded-lg">
                         <input type="checkbox" id="hasIturan"
