@@ -9,7 +9,8 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+        // הוספנו כאן את updateDoc במקום למחוק
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -30,6 +31,9 @@
             alert("שגיאת התחברות ל-Firebase.");
         });
 
+        // הצגת התאריך האוטומטי בטופס
+        document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('he-IL');
+
         const form = document.getElementById('addSafeForm');
         const serialInput = document.getElementById('serialNumber');
         const safeTypeInput = document.getElementById('safeType');
@@ -40,7 +44,10 @@
         const customerNameInput = document.getElementById('customerName');
         const safeNumberInput = document.getElementById('safeNumber');
         
+        // שדה איתוראן
+        const ituranWrapper = document.getElementById('ituranWrapper');
         const hasIturanInput = document.getElementById('hasIturan');
+        const allowedIturanTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'XL'];
         
         const listContainer = document.getElementById('safesList');
         const totalCount = document.getElementById('totalCount');
@@ -65,6 +72,16 @@
             }
         });
 
+        // הצגה/הסתרה של רובריקת איתוראן בהתאם לסוג הכספת
+        safeTypeInput.addEventListener('change', (e) => {
+            if (allowedIturanTypes.includes(e.target.value)) {
+                ituranWrapper.style.display = 'flex';
+            } else {
+                ituranWrapper.style.display = 'none';
+                hasIturanInput.checked = false; 
+            }
+        });
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const serialNumber = serialInput.value.trim();
@@ -80,6 +97,7 @@
             }
 
             try {
+                // כספת חדשה מתווספת ללא סימון ארכיון (isArchived: false)
                 await addDoc(collection(db, 'safes'), {
                     serialNumber,
                     safeType,
@@ -87,10 +105,12 @@
                     customerName,
                     safeNumber,
                     hasIturan,
-                    timestamp: serverTimestamp()
+                    isArchived: false, 
+                    timestamp: serverTimestamp() 
                 });
                 form.reset();
-                returnDetailsDiv.classList.add('hidden'); // הסתרת השדות בחזרה
+                returnDetailsDiv.classList.add('hidden'); 
+                ituranWrapper.style.display = 'none'; 
             } catch (error) {
                 console.error("Error adding doc: ", error);
                 alert("שגיאה בהוספת הכספת.");
@@ -105,6 +125,12 @@
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 const id = docSnap.id;
+                
+                // ה"קסם": מדלגים על כספות שכבר יצאו מהחדר (בארכיון)
+                if (data.isArchived) {
+                    return; 
+                }
+
                 total++;
                 
                 let actualStatus = data.originStatus;
@@ -161,8 +187,8 @@
                                 ${data.hasIturan ? '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded border border-blue-200">איתוראן</span>' : ''}
                             </div>
                         </div>
-                        <button class="text-red-500 hover:text-red-700 delete-btn bg-red-50 p-2 rounded-full transition-colors" data-id="${id}" title="יציאה ללקוח / מחיקה">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <button class="text-red-500 hover:text-red-700 delete-btn bg-red-50 p-2 rounded-full transition-colors" data-id="${id}" title="הוצא מהמלאי (יציאה ללקוח)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </button>
                     </div>
                     <div class="mt-3 pt-2 border-t border-gray-100 flex items-center text-xs text-gray-500">
@@ -173,11 +199,16 @@
                 listContainer.appendChild(div);
             });
 
+            // הפעלת כפתורי היציאה מהמלאי
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    if (confirm('האם אתה בטוח שברצונך למחוק כספת זו מהמלאי (יציאה ללקוח)?')) {
-                        await deleteDoc(doc(db, 'safes', id));
+                    if (confirm('האם כספת זו יצאה מהחדר? הנתונים יישמרו בהיסטוריית היציאות.')) {
+                        // מעדכנים את המסמך במקום למחוק אותו!
+                        await updateDoc(doc(db, 'safes', id), {
+                            isArchived: true, // מעביר לארכיון
+                            dispatchedAt: serverTimestamp() // שומר את תאריך ושעת היציאה
+                        });
                     }
                 });
             });
@@ -220,7 +251,7 @@
         <!-- סטטיסטיקות מלאי -->
         <div class="flex flex-wrap justify-center gap-2 bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 text-center">
             <div class="px-2 py-1">
-                <p class="text-slate-500 text-xs font-bold">סה"כ</p>
+                <p class="text-slate-500 text-xs font-bold">סה"כ בחדר</p>
                 <p class="text-xl font-black text-slate-800" id="totalCount">0</p>
             </div>
             <div class="px-2 py-1">
@@ -244,6 +275,12 @@
         <!-- טופס הוספת כספת -->
         <form id="addSafeForm" class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 border-t-4 border-t-blue-600 mb-8">
             
+            <!-- חיווי תאריך אוטומטי -->
+            <div class="mb-5 text-sm text-slate-600 flex items-center bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                תאריך קליטה למלאי: <span class="font-black text-slate-800 mr-2 text-base" id="currentDateDisplay"></span> <span class="text-xs text-slate-400 mr-2">(נשמר אוטומטית)</span>
+            </div>
+
             <div class="mb-5 relative">
                 <label class="block text-slate-700 text-sm font-bold mb-2">מספר סידורי (מק"ט)</label>
                 <div class="flex items-center relative">
@@ -279,7 +316,7 @@
                 </select>
             </div>
 
-            <!-- אזור מוסתר המכיל את פרטי ההחזרה (שם לקוח ומספר כספת) -->
+            <!-- אזור מוסתר המכיל את פרטי ההחזרה -->
             <div id="returnDetailsDiv" class="mb-5 hidden bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                 <div class="mb-3">
                     <label class="block text-slate-800 text-sm font-bold mb-2">שם הלקוח (חובה)</label>
@@ -291,7 +328,8 @@
                 </div>
             </div>
 
-            <div class="mb-6 flex items-center bg-slate-50 border border-slate-200 p-4 rounded-lg">
+            <!-- רובריקת איתוראן מוסתרת כברירת מחדל -->
+            <div id="ituranWrapper" style="display: none;" class="mb-6 flex items-center bg-slate-50 border border-slate-200 p-4 rounded-lg">
                 <input type="checkbox" id="hasIturan" class="w-6 h-6 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
                 <label for="hasIturan" class="mr-3 text-slate-800 font-bold cursor-pointer select-none">כולל מערכת איתוראן מותקנת</label>
             </div>
