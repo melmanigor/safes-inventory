@@ -38,7 +38,7 @@
         signInAnonymously(auth).catch((error) => console.error("Error signing in: ", error));
         document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('he-IL');
 
-        // פונקציה להעלאת תמונה ל-ImgBB
+        // העלאת תמונה
         async function uploadToImgBB(file) {
             const formData = new FormData();
             formData.append('image', file);
@@ -70,7 +70,47 @@
             }
         });
 
-        // משתני DOM
+        // --- לוגיקת לשוניות (ניווט) ---
+        const tabAddSafe = document.getElementById('tabAddSafe');
+        const tabInventory = document.getElementById('tabInventory');
+        const addSafeView = document.getElementById('addSafeView');
+        const inventoryView = document.getElementById('inventoryView');
+
+        tabAddSafe.addEventListener('click', () => {
+            addSafeView.classList.remove('hidden');
+            inventoryView.classList.add('hidden');
+
+            // עיצוב כפתור פעיל
+            tabAddSafe.classList.replace('bg-slate-200', 'bg-blue-700');
+            tabAddSafe.classList.replace('text-slate-700', 'text-white');
+            tabAddSafe.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
+            tabAddSafe.classList.replace('dark:text-slate-300', 'dark:text-white');
+
+            // עיצוב כפתור לא פעיל
+            tabInventory.classList.replace('bg-blue-700', 'bg-slate-200');
+            tabInventory.classList.replace('text-white', 'text-slate-700');
+            tabInventory.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
+            tabInventory.classList.replace('dark:text-white', 'dark:text-slate-300');
+        });
+
+        tabInventory.addEventListener('click', () => {
+            inventoryView.classList.remove('hidden');
+            addSafeView.classList.add('hidden');
+
+            // עיצוב כפתור פעיל
+            tabInventory.classList.replace('bg-slate-200', 'bg-blue-700');
+            tabInventory.classList.replace('text-slate-700', 'text-white');
+            tabInventory.classList.replace('dark:bg-slate-800', 'dark:bg-blue-600');
+            tabInventory.classList.replace('dark:text-slate-300', 'dark:text-white');
+
+            // עיצוב כפתור לא פעיל
+            tabAddSafe.classList.replace('bg-blue-700', 'bg-slate-200');
+            tabAddSafe.classList.replace('text-white', 'text-slate-700');
+            tabAddSafe.classList.replace('dark:bg-blue-600', 'dark:bg-slate-800');
+            tabAddSafe.classList.replace('dark:text-white', 'dark:text-slate-300');
+        });
+        // ------------------------------
+
         const form = document.getElementById('addSafeForm');
         const submitBtn = document.getElementById('submitBtn');
         const serialInput = document.getElementById('serialNumber');
@@ -95,7 +135,6 @@
         const scanBtn = document.getElementById('scanBtn');
         const fileInput = document.getElementById('fileInput');
 
-        // מודאל יציאה
         const dispatchModal = document.getElementById('dispatchModal');
         const btnTakeOutgoingPhoto = document.getElementById('btnTakeOutgoingPhoto');
         const btnSkipPhoto = document.getElementById('btnSkipPhoto');
@@ -103,7 +142,6 @@
         const outgoingFileInput = document.getElementById('outgoingFileInput');
         let currentDispatchId = null;
 
-        // לוגיקת ארכיון
         const viewArchiveBtn = document.getElementById('viewArchiveBtn');
         const listTitle = document.getElementById('listTitle');
         let showingArchive = false;
@@ -117,7 +155,7 @@
                 viewArchiveBtn.classList.replace('text-slate-700', 'text-blue-800');
                 listTitle.innerHTML = '📦 היסטוריית כספות שיצאו (ארכיון)';
             } else {
-                viewArchiveBtn.innerHTML = '🗄️ היסטוריית יציאות (ארכיון)';
+                viewArchiveBtn.innerHTML = '🗄️️ היסטוריית יציאות (ארכיון)';
                 viewArchiveBtn.classList.replace('bg-blue-100', 'bg-slate-200');
                 viewArchiveBtn.classList.replace('text-blue-800', 'text-slate-700');
                 listTitle.innerHTML = 'מלאי כספות נוכחי';
@@ -125,7 +163,6 @@
             renderSafes();
         });
 
-        // הצגת שדות לקוח ותמונת כניסה
         safeStatusSelect.addEventListener('change', (e) => {
             if (e.target.value === 'returned' || e.target.value === 'cancelled') {
                 returnDetailsDiv.classList.remove('hidden');
@@ -135,7 +172,7 @@
                 customerNameInput.required = false;
                 customerNameInput.value = '';
                 safeNumberInput.value = '';
-                incomingFileInput.value = ''; // ניקוי תמונה אם נבחר משהו אחר
+                incomingFileInput.value = '';
             }
         });
 
@@ -148,7 +185,6 @@
             }
         });
 
-        // הוספת כספת למלאי
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const serialNumber = serialInput.value.trim();
@@ -163,7 +199,6 @@
                 return;
             }
 
-            // העלאת תמונת כניסה אם קיימת
             let incomingImageUrl = null;
             if (incomingFileInput.files.length > 0) {
                 if (IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") {
@@ -172,7 +207,7 @@
                 }
                 submitBtn.disabled = true;
                 const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '⏳ מעלה תמונה למערכת, אנא המתן...';
+                submitBtn.innerHTML = '⏳ מעלה תמונה למערכת...';
 
                 try {
                     incomingImageUrl = await uploadToImgBB(incomingFileInput.files[0]);
@@ -194,21 +229,21 @@
                     customerName,
                     safeNumber,
                     hasIturan,
-                    incomingImageUrl, // שמירת קישור התמונה ב-DB
+                    incomingImageUrl,
                     isArchived: false,
                     timestamp: serverTimestamp()
                 });
+
+                alert("✅ הכספת נוספה בהצלחה!");
                 form.reset();
                 returnDetailsDiv.classList.add('hidden');
                 ituranWrapper.style.display = 'none';
-                if (showingArchive) viewArchiveBtn.click();
             } catch (error) {
                 console.error("Error adding doc: ", error);
-                alert("שגיאה בהוספת הכספת. האם ה-Database פתוח?");
+                alert("שגיאה בהוספת הכספת.");
             }
         });
 
-        // רינדור כספות
         const renderSafes = () => {
             listContainer.innerHTML = '';
 
@@ -218,7 +253,7 @@
             });
 
             if (filteredSafes.length === 0) {
-                listContainer.innerHTML = `<p class="text-center text-slate-500 dark:text-slate-400 mt-4">אין כספות להצגה בתצוגה זו.</p>`;
+                listContainer.innerHTML = `<p class="text-center text-slate-500 dark:text-slate-400 mt-8">אין כספות להצגה בתצוגה זו.</p>`;
                 return;
             }
 
@@ -255,7 +290,6 @@
                 const customerDisplay = data.customerName ? `<p class="text-sm text-slate-700 dark:text-slate-300 mt-1">לקוח: <span class="font-bold">${data.customerName}</span></p>` : '';
                 const safeNumberDisplay = data.safeNumber ? `<p class="text-sm text-slate-700 dark:text-slate-300">מספר כספת: <span class="font-bold text-indigo-700 dark:text-indigo-400">${data.safeNumber}</span></p>` : '';
 
-                // תצוגת קישורי תמונות (אם קיימות)
                 const incomingPhotoLink = data.incomingImageUrl ? `<a href="${data.incomingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ כניסה</a>` : '';
                 const outgoingPhotoLink = data.outgoingImageUrl ? `<a href="${data.outgoingImageUrl}" target="_blank" class="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition-colors">🖼️ יציאה</a>` : '';
 
@@ -300,7 +334,6 @@
                 listContainer.appendChild(div);
             });
 
-            // פתיחת מודאל ההוצאה
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     currentDispatchId = e.currentTarget.getAttribute('data-id');
@@ -321,13 +354,11 @@
             });
         };
 
-        // לוגיקת המודאל (יציאת כספת)
         btnCancelDispatch.addEventListener('click', () => {
             dispatchModal.classList.add('hidden');
             currentDispatchId = null;
         });
 
-        // יציאה ללא תמונה
         btnSkipPhoto.addEventListener('click', async () => {
             if (!currentDispatchId) return;
             btnSkipPhoto.innerHTML = 'מעדכן...';
@@ -339,7 +370,6 @@
             dispatchModal.classList.add('hidden');
         });
 
-        // יציאה עם תמונה (פתיחת מצלמה)
         btnTakeOutgoingPhoto.addEventListener('click', () => {
             if (IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") {
                 alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB בקוד.");
@@ -348,7 +378,6 @@
             outgoingFileInput.click();
         });
 
-        // כשנבחרה תמונת יציאה
         outgoingFileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file || !currentDispatchId) return;
@@ -405,7 +434,6 @@
             renderSafes();
         });
 
-        // OCR סריקת מק"ט
         scanBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -431,173 +459,199 @@
 </head>
 
 <body class="bg-slate-100 dark:bg-slate-900 p-3 md:p-6 font-sans transition-colors duration-300">
-    <div class="max-w-lg mx-auto">
+    <div class="max-w-lg mx-auto min-h-screen flex flex-col">
 
-        <!-- כפתור תצוגת לילה -->
-        <div class="flex justify-end mb-2">
-            <button id="themeToggleBtn"
-                class="text-sm bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-full font-bold shadow-sm transition-colors">
-                🌙 מצב לילה
-            </button>
-        </div>
-
-        <h1 class="text-2xl md:text-3xl font-black text-center mb-6 text-slate-800 dark:text-white">מערכת ניהול כספות
-        </h1>
-
-        <!-- סטטיסטיקות מלאי -->
-        <div
-            class="flex flex-wrap justify-center gap-2 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 text-center transition-colors">
-            <div class="px-2 py-1">
-                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סה"כ בחדר</p>
-                <p class="text-xl font-black text-slate-800 dark:text-white" id="totalCount">0</p>
-            </div>
-            <div class="px-2 py-1">
-                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">חדשות</p>
-                <p class="text-xl font-black text-green-600 dark:text-green-400" id="newCount">0</p>
-            </div>
-            <div class="px-2 py-1">
-                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">איתוראן</p>
-                <p class="text-xl font-black text-blue-600 dark:text-blue-400" id="ituranCount">0</p>
-            </div>
-            <div class="px-2 py-1">
-                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סיום פעילות</p>
-                <p class="text-xl font-black text-yellow-600 dark:text-yellow-400" id="returnedCount">0</p>
-            </div>
-            <div class="px-2 py-1">
-                <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">בוטלו</p>
-                <p class="text-xl font-black text-orange-600 dark:text-orange-400" id="cancelledCount">0</p>
-            </div>
-        </div>
-
-        <!-- טופס הוספת כספת -->
-        <form id="addSafeForm"
-            class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 border-t-4 border-t-blue-600 dark:border-t-blue-500 mb-8 transition-colors">
-
-            <div
-                class="mb-5 text-sm text-slate-600 dark:text-slate-300 flex items-center bg-slate-50 dark:bg-slate-700 p-2.5 rounded-lg border border-slate-200 dark:border-slate-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 text-slate-400" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                תאריך קליטה: <span class="font-black text-slate-800 dark:text-white mr-2 text-base"
-                    id="currentDateDisplay"></span> <span class="text-xs text-slate-400 mr-2">(אוטומטי)</span>
+        <div class="flex-grow">
+            <div class="flex justify-end mb-2">
+                <button id="themeToggleBtn"
+                    class="text-sm bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-full font-bold shadow-sm transition-colors">
+                    🌙 מצב לילה
+                </button>
             </div>
 
-            <div class="mb-5 relative">
-                <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2">מספר סידורי
-                    (מק"ט)</label>
-                <div class="flex items-center relative">
-                    <input type="text" id="serialNumber"
-                        class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 pr-3 pl-12 font-semibold"
-                        placeholder="הקלד או צלם ברקוד...">
-                    <button type="button" id="scanBtn"
-                        class="absolute left-2 top-2 bg-blue-100 dark:bg-blue-900 p-1.5 rounded-md text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                        title="צלם מספר סידורי">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
+            <h1 class="text-2xl md:text-3xl font-black text-center mb-6 text-slate-800 dark:text-white">מערכת ניהול
+                כספות</h1>
+
+            <!-- תפריט הניווט הראשי (לשוניות) -->
+            <div class="flex justify-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
+                <button id="tabAddSafe"
+                    class="bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors text-sm flex items-center gap-2">
+                    ➕ קליטת כספת
+                </button>
+                <button id="tabInventory"
+                    class="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors text-sm flex items-center gap-2">
+                    📦 מלאי וארכיון
+                </button>
+            </div>
+
+            <!-- ============================== -->
+            <!-- תצוגה 1: טופס הוספה + סטטיסטיקות -->
+            <!-- ============================== -->
+            <div id="addSafeView">
+
+                <div
+                    class="flex flex-wrap justify-center gap-2 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 text-center transition-colors">
+                    <div class="px-2 py-1">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סה"כ בחדר</p>
+                        <p class="text-xl font-black text-slate-800 dark:text-white" id="totalCount">0</p>
+                    </div>
+                    <div class="px-2 py-1">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">חדשות</p>
+                        <p class="text-xl font-black text-green-600 dark:text-green-400" id="newCount">0</p>
+                    </div>
+                    <div class="px-2 py-1">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">איתוראן</p>
+                        <p class="text-xl font-black text-blue-600 dark:text-blue-400" id="ituranCount">0</p>
+                    </div>
+                    <div class="px-2 py-1">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">סיום פעילות</p>
+                        <p class="text-xl font-black text-yellow-600 dark:text-yellow-400" id="returnedCount">0</p>
+                    </div>
+                    <div class="px-2 py-1">
+                        <p class="text-slate-500 dark:text-slate-400 text-xs font-bold">בוטלו</p>
+                        <p class="text-xl font-black text-orange-600 dark:text-orange-400" id="cancelledCount">0</p>
+                    </div>
+                </div>
+
+                <form id="addSafeForm"
+                    class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 border-t-4 border-t-blue-600 dark:border-t-blue-500 mb-8 transition-colors">
+
+                    <div
+                        class="mb-5 text-sm text-slate-600 dark:text-slate-300 flex items-center bg-slate-50 dark:bg-slate-700 p-2.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 text-slate-400" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
+                        תאריך קליטה: <span class="font-black text-slate-800 dark:text-white mr-2 text-base"
+                            id="currentDateDisplay"></span> <span class="text-xs text-slate-400 mr-2">(אוטומטי)</span>
+                    </div>
+
+                    <div class="mb-5 relative">
+                        <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2">מספר סידורי
+                            (מק"ט)</label>
+                        <div class="flex items-center relative">
+                            <input type="text" id="serialNumber"
+                                class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 pr-3 pl-12 font-semibold"
+                                placeholder="הקלד או צלם ברקוד...">
+                            <button type="button" id="scanBtn"
+                                class="absolute left-2 top-2 bg-blue-100 dark:bg-blue-900 p-1.5 rounded-md text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                title="צלם מספר סידורי">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                            <input type="file" id="fileInput" accept="image/*" capture="environment" class="hidden">
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2"
+                            for="safeType">סוג כספת</label>
+                        <select id="safeType"
+                            class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 px-3 font-semibold"
+                            required>
+                            <option value="" disabled selected>בחר סוג כספת...</option>
+                            <option value="SDM-100">SDM-100</option>
+                            <option value="SDM-500">SDM-500</option>
+                            <option value="SUMMIT">SUMMIT</option>
+                            <option value="CDS">CDS</option>
+                            <option value="CD-5">CD-5</option>
+                            <option value="CD-7">CD-7</option>
+                            <option value="XL">XL</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2"
+                            for="safeStatus">מצב הכספת / מקור</label>
+                        <select id="safeStatus"
+                            class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 px-3 font-semibold"
+                            required>
+                            <option value="" disabled selected>בחר סטטוס...</option>
+                            <option value="new">⭐ כספת חדשה מהניילון</option>
+                            <option value="returned">🔄 חזרה מלקוח (סיום פעילות)</option>
+                            <option value="cancelled">❌ חזרה עקב ביטול התקנה מצד הלקוח</option>
+                        </select>
+                    </div>
+
+                    <div id="returnDetailsDiv"
+                        class="mb-5 hidden bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                        <div class="mb-3">
+                            <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">שם הלקוח
+                                (חובה)</label>
+                            <input type="text" id="customerName"
+                                class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
+                                placeholder="מאיזה לקוח הכספת חזרה?">
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">מספר כספת
+                                (אופציונלי)</label>
+                            <input type="text" id="safeNumber"
+                                class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
+                                placeholder="הזן מספר כספת אם קיים">
+                        </div>
+                        <div>
+                            <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">צילום כספת
+                                נכנסת (אופציונלי)</label>
+                            <input type="file" id="incomingFileInput" accept="image/*" capture="environment"
+                                class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-800 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div id="ituranWrapper" style="display: none;"
+                        class="mb-6 flex items-center bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-4 rounded-lg">
+                        <input type="checkbox" id="hasIturan"
+                            class="w-6 h-6 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
+                        <label for="hasIturan"
+                            class="mr-3 text-slate-800 dark:text-slate-200 font-bold cursor-pointer select-none">כולל
+                            מערכת איתוראן מותקנת</label>
+                    </div>
+
+                    <button type="submit" id="submitBtn"
+                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black text-lg py-4 px-4 rounded-xl shadow-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        ➕ הוסף למלאי בחדר
                     </button>
-                    <!-- קלט נסתר עבור OCR -->
-                    <input type="file" id="fileInput" accept="image/*" capture="environment" class="hidden">
+                </form>
+            </div>
+
+
+            <!-- ============================== -->
+            <!-- תצוגה 2: רשימות (מוסתר כברירת מחדל) -->
+            <!-- ============================== -->
+            <div id="inventoryView" class="hidden">
+
+                <div
+                    class="flex justify-between items-center mb-4 border-b-2 border-slate-200 dark:border-slate-700 pb-2">
+                    <h2 id="listTitle" class="text-xl font-black text-slate-800 dark:text-white">
+                        מלאי כספות נוכחי
+                    </h2>
+                    <button id="viewArchiveBtn"
+                        class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg font-bold transition-colors shadow-sm text-xs flex items-center gap-1">
+                        🗄️ היסטוריית יציאות (ארכיון)
+                    </button>
+                </div>
+
+                <div id="safesList" class="space-y-3">
+                    <!-- הרשימה תתרנדר כאן -->
                 </div>
             </div>
+            <!-- סוף תצוגה 2 -->
 
-            <div class="mb-5">
-                <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" for="safeType">סוג
-                    כספת</label>
-                <select id="safeType"
-                    class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 px-3 font-semibold"
-                    required>
-                    <option value="" disabled selected>בחר סוג כספת...</option>
-                    <option value="SDM-100">SDM-100</option>
-                    <option value="SDM-500">SDM-500</option>
-                    <option value="SUMMIT">SUMMIT</option>
-                    <option value="CDS">CDS</option>
-                    <option value="CD-5">CD-5</option>
-                    <option value="CD-7">CD-7</option>
-                    <option value="XL">XL</option>
-                </select>
-            </div>
-
-            <div class="mb-5">
-                <label class="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2" for="safeStatus">מצב
-                    הכספת / מקור</label>
-                <select id="safeStatus"
-                    class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full py-3 px-3 font-semibold"
-                    required>
-                    <option value="" disabled selected>בחר סטטוס...</option>
-                    <option value="new">⭐ כספת חדשה מהניילון</option>
-                    <option value="returned">🔄 חזרה מלקוח (סיום פעילות)</option>
-                    <option value="cancelled">❌ חזרה עקב ביטול התקנה מצד הלקוח</option>
-                </select>
-            </div>
-
-            <div id="returnDetailsDiv"
-                class="mb-5 hidden bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
-                <div class="mb-3">
-                    <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">שם הלקוח
-                        (חובה)</label>
-                    <input type="text" id="customerName"
-                        class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
-                        placeholder="מאיזה לקוח הכספת חזרה?">
-                </div>
-                <div class="mb-3">
-                    <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">מספר כספת
-                        (אופציונלי)</label>
-                    <input type="text" id="safeNumber"
-                        class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:ring-yellow-500 block w-full py-2.5 px-3 font-semibold placeholder-slate-400"
-                        placeholder="הזן מספר כספת אם קיים">
-                </div>
-                <div>
-                    <label class="block text-slate-800 dark:text-slate-200 text-sm font-bold mb-2">צילום כספת נכנסת
-                        (אופציונלי)</label>
-                    <input type="file" id="incomingFileInput" accept="image/*" capture="environment"
-                        class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-800 cursor-pointer">
-                </div>
-            </div>
-
-            <div id="ituranWrapper" style="display: none;"
-                class="mb-6 flex items-center bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 p-4 rounded-lg">
-                <input type="checkbox" id="hasIturan"
-                    class="w-6 h-6 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
-                <label for="hasIturan"
-                    class="mr-3 text-slate-800 dark:text-slate-200 font-bold cursor-pointer select-none">כולל מערכת
-                    איתוראן מותקנת</label>
-            </div>
-
-            <button type="submit" id="submitBtn"
-                class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black text-lg py-4 px-4 rounded-xl shadow-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300">
-                ➕ הוסף למלאי בחדר
-            </button>
-        </form>
-
-        <!-- אזור כפתור תצוגת הארכיון -->
-        <div class="flex justify-center mb-4">
-            <button id="viewArchiveBtn"
-                class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold transition-colors shadow-sm text-sm flex items-center gap-2">
-                🗄️ היסטוריית יציאות (ארכיון)
-            </button>
         </div>
 
-        <!-- רשימת הכספות -->
-        <div>
-            <h2 id="listTitle"
-                class="text-xl font-black mb-4 text-slate-800 dark:text-white border-b-2 border-slate-200 dark:border-slate-700 pb-2">
-                מלאי כספות נוכחי
-            </h2>
-            <div id="safesList" class="space-y-3">
-                <!-- Data will be populated here -->
-            </div>
+        <!-- זכויות יוצרים בתחתית העמוד -->
+        <div class="mt-10 mb-4 text-center">
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">© זכויות יוצרים איגור מלמן לטובת מרלוג</p>
         </div>
 
     </div>
 
-    <!-- מודאל - צילום כספת ביציאה -->
+    <!-- מודאל יציאה (מוסתר) -->
     <div id="dispatchModal"
         class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
         <div
@@ -621,7 +675,6 @@
                 </button>
             </div>
 
-            <!-- קלט נסתר לצילום יציאה -->
             <input type="file" id="outgoingFileInput" accept="image/*" capture="environment" class="hidden">
         </div>
     </div>
