@@ -20,7 +20,7 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f";
+        const IMGBB_API_KEY = "הכנס_כאן_את_המפתח_שלך_מ_IMGBB";
         // ===================================
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
@@ -104,6 +104,7 @@
         
         const allowedIturanTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'XL'];
         const listContainer = document.getElementById('safesList');
+        const searchInput = document.getElementById('searchInput'); // שדה החיפוש החדש
         const scanBtn = document.getElementById('scanBtn');
         const fileInput = document.getElementById('fileInput');
 
@@ -130,6 +131,11 @@
                 viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
                 listTitle.innerHTML = 'מלאי כספות נוכחי';
             }
+            renderSafes();
+        });
+
+        // האזנה להקלדה בשדה החיפוש ורינדור מחדש
+        searchInput.addEventListener('input', () => {
             renderSafes();
         });
 
@@ -208,10 +214,17 @@
 
         const renderSafes = () => {
             listContainer.innerHTML = '';
-            const filteredSafes = allSafesData.filter(safe => showingArchive ? safe.data.isArchived : !safe.data.isArchived);
+            const searchTerm = searchInput.value.trim().toLowerCase();
+
+            // סינון לפי ארכיון + מילת חיפוש
+            const filteredSafes = allSafesData.filter(safe => {
+                const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
+                const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
+                return matchesArchive && matchesSearch;
+            });
 
             if (filteredSafes.length === 0) {
-                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה בתצוגה זו.</div>`;
+                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה התואמות את החיפוש.</div>`;
                 return;
             }
 
@@ -464,9 +477,6 @@
             renderSafes();
         });
 
-        // ----------------------------------------------------
-        // הסורק המשופר (OCR) למניעת ג'יבריש ורעש ויזואלי
-        // ----------------------------------------------------
         scanBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -479,14 +489,11 @@
                 const result = await Tesseract.recognize(file, 'eng');
                 const text = result.data.text;
                 
-                // מחפש רצף של 4 עד 8 ספרות שעומד בפני עצמו
                 const match = text.match(/(?:^|\D)(\d{4,8})(?:\D|$)/);
                 
                 if (match && match[1]) {
-                    // מצאנו מספר מושלם!
                     serialInput.value = match[1];
                 } else {
-                    // אם לא מצא רצף נקי, בודק אם לפחות יש רצף מספרים בודד שאפשר להציל
                     const numbersOnly = text.replace(/[^0-9]/g, '');
                     if (numbersOnly.length >= 4 && numbersOnly.length <= 8) {
                         serialInput.value = numbersOnly;
@@ -607,8 +614,14 @@
         <div id="inventoryView" class="d-none">
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                 <h3 id="listTitle" class="fw-bold mb-0">מלאי כספות נוכחי</h3>
-                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ היסטוריית יציאות</button>
+                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️️ היסטוריית יציאות</button>
             </div>
+            
+            <!-- שורת חיפוש חדשה שנוספה כאן -->
+            <div class="mb-3">
+                <input type="text" id="searchInput" class="form-control border-primary fw-bold text-center" placeholder="🔍 חפש כספת לפי מספר סידורי...">
+            </div>
+
             <div id="safesList">
                 <!-- הרשימה תתרנדר כאן -->
             </div>
