@@ -464,28 +464,44 @@
             renderSafes();
         });
 
+        // ----------------------------------------------------
+        // מערכת סריקת הברקודים המשופרת (OCR)
+        // ----------------------------------------------------
         scanBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            serialInput.value = "סורק תמונה...";
+
+            serialInput.value = "סורק תמונה, אנא המתן...";
             scanBtn.disabled = true;
+
             try {
+                // סורקים את התמונה באופן רגיל
                 const result = await Tesseract.recognize(file, 'eng');
                 
-                // --- הלוגיקה המעודכנת לסינון תווים ---
-                const cleaned = result.data.text
-                    .replace(/\n/g, ' ') // החלפת ירידת שורה ברווח
-                    .replace(/[^a-zA-Z0-9.\/ \-]/g, '') // שומר על אותיות, מספרים, נקודות, לוכסנים, מקפים ורווחים
-                    .replace(/\s+/g, ' ') // מונע מצב של כמה רווחים ברצף
-                    .trim();
-                // ------------------------------------
+                // "צייד המספרים": מחפש בתוך התוצאה רצף של 4 עד 8 ספרות רצופות
+                const match = result.data.text.match(/\d{4,8}/);
                 
-                serialInput.value = cleaned;
+                if (match) {
+                    // אם מצאנו רצף כזה (כמו 18584), נכניס רק אותו!
+                    serialInput.value = match[0];
+                } else {
+                    // במקרה קיצון שלא מצא, ננסה להשאיר רק את המספרים שכן מצא
+                    const fallback = result.data.text.replace(/[^0-9]/g, '');
+                    if (fallback.length > 0) {
+                        serialInput.value = fallback;
+                    } else {
+                        serialInput.value = "";
+                        alert("לא זוהה מספר. נסה לצלם את המדבקה מקרוב וברור יותר.");
+                    }
+                }
             } catch (error) {
-                serialInput.value = ""; alert("שגיאה בסריקה. נסה שוב.");
+                console.error(error);
+                serialInput.value = "";
+                alert("שגיאה בסריקה. אנא נסה שוב.");
             } finally {
-                scanBtn.disabled = false; fileInput.value = "";
+                scanBtn.disabled = false;
+                fileInput.value = "";
             }
         });
     </script>
