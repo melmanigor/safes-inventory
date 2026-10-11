@@ -16,7 +16,6 @@
         .glass-modal { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
         .card { transition: transform 0.2s; }
         .tab-btn { transition: all 0.2s; }
-        /* אפקט ריחוף לריבועי הסטטיסטיקה כדי שיבינו שהם לחיצים */
         .stat-card { transition: all 0.2s ease-in-out; }
         .stat-card:hover { transform: scale(1.03); opacity: 0.9; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
     </style>
@@ -121,9 +120,68 @@
         let currentDispatchId = null;
 
         const viewArchiveBtn = document.getElementById('viewArchiveBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn'); // כפתור האקסל
         const listTitle = document.getElementById('listTitle');
         let showingArchive = false;
         let allSafesData = [];
+
+        // --- ייצוא לאקסל ---
+        exportExcelBtn.addEventListener('click', () => {
+            const dataToExport = allSafesData.filter(safe => {
+                // מסננים לפי הצפייה הנוכחית (ארכיון או מלאי פעיל) וגם אם יש סינון קטגוריה
+                const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
+                let matchesCategory = true;
+                if (!showingArchive && currentCategoryFilter !== 'all') {
+                    let actualStatus = safe.data.originStatus || (safe.data.isNewSafe ? 'new' : (safe.data.returnedFromCustomer ? 'returned' : 'unknown'));
+                    matchesCategory = (actualStatus === currentCategoryFilter);
+                }
+                return matchesArchive && matchesCategory;
+            });
+
+            if (dataToExport.length === 0) {
+                return alert("אין נתונים לייצוא.");
+            }
+
+            let csvContent = "\uFEFF"; // הגדרת BOM לפתיחה תקינה של עברית באקסל
+            csvContent += "מספר סידורי,סוג כספת,סטטוס בחדר,תאריך קליטה,איתוראן מותקן,מנעול נקישות מותקן,התקבלה מלקוח / בוטלה אצל,הערות קליטה,תאריך יציאה ללקוח,שם לקוח יוצא,מספר כספת יציאה\n";
+
+            dataToExport.forEach(safe => {
+                const d = safe.data;
+                const statusMap = { 'new': 'חדשה מהניילון', 'returned': 'חזרה (סיום פעילות)', 'cancelled': 'בוטלה התקנה' };
+                const actualStatus = statusMap[d.originStatus] || 'לא ידוע';
+                
+                const inDate = d.timestamp ? d.timestamp.toDate().toLocaleDateString('he-IL') : '';
+                const outDate = d.dispatchedAt ? d.dispatchedAt.toDate().toLocaleDateString('he-IL') : '';
+                const hasIturan = d.hasIturan ? 'כן' : 'לא';
+                const hasKnock = d.hasKnockLock ? 'כן' : 'לא';
+
+                // פונקציה לבריחת טקסט (מונע באגים בפסיקים ושורות חדשות באקסל)
+                const escapeCSV = (text) => text ? `"${String(text).replace(/"/g, '""')}"` : '""';
+
+                csvContent += [
+                    escapeCSV(d.serialNumber),
+                    escapeCSV(d.safeType),
+                    escapeCSV(actualStatus),
+                    escapeCSV(inDate),
+                    escapeCSV(hasIturan),
+                    escapeCSV(hasKnock),
+                    escapeCSV(d.customerName),
+                    escapeCSV(d.safeConditionNotes),
+                    escapeCSV(outDate),
+                    escapeCSV(d.outgoingCustomer),
+                    escapeCSV(d.outgoingSafeNumber)
+                ].join(",") + "\n";
+            });
+
+            // יצירת קובץ להורדה
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = showingArchive ? "Safes_Archive.csv" : "Safes_Active_Inventory.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
 
         // --- לוגיקת סינון לפי רובריקות ---
         let currentCategoryFilter = 'all';
@@ -134,7 +192,7 @@
         function applyCategoryFilter(filterType, filterName) {
             currentCategoryFilter = filterType;
             showingArchive = false; 
-            viewArchiveBtn.innerHTML = '🗄️ היסטוריית יציאות';
+            viewArchiveBtn.innerHTML = '🗄️ יציאות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
             listTitle.innerHTML = 'מלאי כספות נוכחי';
             
@@ -165,11 +223,11 @@
             activeFilterContainer.classList.add('d-none');
 
             if (showingArchive) {
-                viewArchiveBtn.innerHTML = '🔙 חזור למלאי פעיל';
+                viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
                 viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
-                listTitle.innerHTML = '📦 היסטוריית כספות שיצאו';
+                listTitle.innerHTML = '📦 היסטוריית יציאות';
             } else {
-                viewArchiveBtn.innerHTML = '🗄️ היסטוריית יציאות';
+                viewArchiveBtn.innerHTML = '🗄️ יציאות';
                 viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
                 listTitle.innerHTML = 'מלאי כספות נוכחי';
             }
@@ -697,7 +755,10 @@
         <div id="inventoryView" class="d-none">
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                 <h3 id="listTitle" class="fw-bold mb-0">מלאי כספות נוכחי</h3>
-                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ היסטוריית יציאות</button>
+                <div class="d-flex gap-2">
+                    <button id="exportExcelBtn" class="btn btn-sm btn-success fw-bold" title="ייצוא לאקסל">📥 לאקסל</button>
+                    <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ יציאות</button>
+                </div>
             </div>
             
             <div class="mb-3">
@@ -722,7 +783,7 @@
         <!-- ============================== -->
         <div id="statsView" class="d-none">
             
-            <!-- סקירה כללית (לחיצה על הקוביות תסנן את הרשימה) -->
+            <!-- סקירה כללית -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
                     <h5 class="fw-bold">סקירה כללית <span class="fs-6 text-muted fw-normal">(לחץ על נתון לצפייה ברשימה)</span></h5>
