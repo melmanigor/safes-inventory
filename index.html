@@ -176,17 +176,14 @@
 
             if (!serialNumber || !safeType || !originStatus) return alert('נא למלא את כל שדות החובה.');
 
-            // ---> בדיקת כפילויות חכמה <---
-            // מוודא שהמספר הסידורי לא קיים כבר במלאי הפעיל (כלומר, כספות שטרם יצאו לארכיון)
             const isDuplicate = allSafesData.some(safe => 
                 safe.data.serialNumber.toLowerCase() === serialNumber.toLowerCase() && safe.data.isArchived === false
             );
 
             if (isDuplicate) {
                 alert(`⚠️ שגיאה: כספת עם המספר הסידורי ${serialNumber} כבר נמצאת במלאי הפעיל בחדר!\nאנא ודא שלא סרקת אותה פעמיים.`);
-                return; // עוצר את הפעולה ולא מכניס למסד הנתונים
+                return;
             }
-            // -----------------------------
 
             let incomingImageUrl = null;
             if (incomingFileInput.files.length > 0) {
@@ -383,32 +380,60 @@
             });
         };
 
-        const updateStatsDashboard = (statsObj) => {
+        const updateStatsDashboard = (statsObj, allActiveSafes) => {
+            // עדכון חלוניות למעלה
             document.getElementById('statTotal').textContent = statsObj.total;
             document.getElementById('statNew').textContent = statsObj.newSafes;
             document.getElementById('statReturned').textContent = statsObj.returned;
             document.getElementById('statCancelled').textContent = statsObj.cancelled;
 
-            const modelsListContainer = document.getElementById('statModelsList');
-            modelsListContainer.innerHTML = '';
+            // עיבוד נתונים לטבלה החדשה
+            const tableStats = {};
             const orderedTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'CD-SMALL (CDS)', 'CD-5', 'CD-7', 'XL'];
             
-            orderedTypes.forEach(type => {
-                modelsListContainer.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                        <span class="fw-bold">${type}</span>
-                        <span class="badge bg-primary rounded-pill fs-6">${statsObj.types[type] || 0}</span>
-                    </li>
-                `;
+            orderedTypes.forEach(t => {
+                tableStats[t] = { total: 0, ituranYes: 0, ituranNo: 0, knockYes: 0, knockNo: 0 };
             });
 
-            document.getElementById('statSdmReadyBoth').textContent = statsObj.sdmReadyBoth;
-            document.getElementById('statSdmReadyNoIturan').textContent = statsObj.sdmReadyNoIturan;
-            document.getElementById('statSdmPendingBoth').textContent = statsObj.sdmPendingBoth;
-            document.getElementById('statSdmPendingKnockHasIturan').textContent = statsObj.sdmPendingKnockHasIturan;
+            allActiveSafes.forEach(safe => {
+                const type = safe.data.safeType || 'אחר';
+                if (!tableStats[type]) tableStats[type] = { total: 0, ituranYes: 0, ituranNo: 0, knockYes: 0, knockNo: 0 };
 
-            document.getElementById('statOtherReadyWithIturan').textContent = statsObj.otherReadyWithIturan;
-            document.getElementById('statOtherReadyNoIturan').textContent = statsObj.otherReadyNoIturan;
+                tableStats[type].total++;
+                if (safe.data.hasIturan) tableStats[type].ituranYes++; else tableStats[type].ituranNo++;
+
+                if (type === 'SDM-100' || type === 'SDM-500') {
+                    if (safe.data.hasKnockLock) tableStats[type].knockYes++; else tableStats[type].knockNo++;
+                }
+            });
+
+            // יצירת תוכן הטבלה
+            const tbody = document.getElementById('statsTableBody');
+            tbody.innerHTML = '';
+            
+            orderedTypes.forEach(type => {
+                const s = tableStats[type];
+                const isSDM = (type === 'SDM-100' || type === 'SDM-500');
+
+                // עיצוב למספרים: בולט אם מעל 0, דהוי אם 0
+                const ituranYesUI = s.ituranYes > 0 ? `<span class="text-success fw-bold">${s.ituranYes}</span>` : `<span class="text-muted opacity-50">0</span>`;
+                const ituranNoUI = s.ituranNo > 0 ? `<span class="text-warning-emphasis fw-bold">${s.ituranNo}</span>` : `<span class="text-muted opacity-50">0</span>`;
+                
+                // נקישות - מוצג רק ב-SDM, בשאר מקף כיוון שזה לא חובה/לא קיים
+                const knockYesUI = isSDM ? (s.knockYes > 0 ? `<span class="text-success fw-bold">${s.knockYes}</span>` : `<span class="text-muted opacity-50">0</span>`) : `<span class="text-muted opacity-50">-</span>`;
+                const knockNoUI = isSDM ? (s.knockNo > 0 ? `<span class="text-warning-emphasis fw-bold">${s.knockNo}</span>` : `<span class="text-muted opacity-50">0</span>`) : `<span class="text-muted opacity-50">-</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold text-start ps-3 bg-body-tertiary">${type}</td>
+                        <td class="fw-bolder fs-6 text-primary bg-body-tertiary">${s.total}</td>
+                        <td>${ituranYesUI}</td>
+                        <td>${ituranNoUI}</td>
+                        <td>${knockYesUI}</td>
+                        <td>${knockNoUI}</td>
+                    </tr>
+                `;
+            });
         };
 
         btnCancelDispatch.addEventListener('click', () => {
@@ -476,11 +501,8 @@
         const q = query(collection(db, 'safes'), orderBy('timestamp', 'desc'));
         onSnapshot(q, (snapshot) => {
             allSafesData = []; 
-            let stats = {
-                total: 0, newSafes: 0, returned: 0, cancelled: 0, types: {},
-                sdmReadyBoth: 0, sdmReadyNoIturan: 0, sdmPendingKnockHasIturan: 0, sdmPendingBoth: 0,
-                otherReadyWithIturan: 0, otherReadyNoIturan: 0
-            };
+            let stats = { total: 0, newSafes: 0, returned: 0, cancelled: 0 };
+            const activeSafes = [];
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
@@ -488,31 +510,17 @@
                 allSafesData.push({ id, data }); 
 
                 if (!data.isArchived) {
+                    activeSafes.push({ id, data });
                     stats.total++;
                     let actualStatus = data.originStatus || (data.isNewSafe ? 'new' : (data.returnedFromCustomer ? 'returned' : 'unknown'));
                     
                     if (actualStatus === 'new') stats.newSafes++;
                     if (actualStatus === 'returned') stats.returned++;
                     if (actualStatus === 'cancelled') stats.cancelled++;
-                    
-                    const type = data.safeType || 'אחר';
-                    stats.types[type] = (stats.types[type] || 0) + 1;
-
-                    if (actualStatus === 'new') {
-                        if (type === 'SDM-100' || type === 'SDM-500') {
-                            if (data.hasKnockLock && data.hasIturan) stats.sdmReadyBoth++; 
-                            else if (data.hasKnockLock && !data.hasIturan) stats.sdmReadyNoIturan++; 
-                            else if (!data.hasKnockLock && data.hasIturan) stats.sdmPendingKnockHasIturan++; 
-                            else stats.sdmPendingBoth++; 
-                        } else if (allowedIturanTypes.includes(type)) {
-                            if (data.hasIturan) stats.otherReadyWithIturan++;
-                            else stats.otherReadyNoIturan++;
-                        }
-                    }
                 }
             });
 
-            updateStatsDashboard(stats);
+            updateStatsDashboard(stats, activeSafes);
             renderSafes();
         });
 
@@ -552,7 +560,7 @@
     </script>
 </head>
 <body class="bg-body-tertiary">
-    <div class="container py-4" style="max-width: 600px;">
+    <div class="container py-4" style="max-width: 650px;">
         
         <!-- כפתור מצב לילה עליון -->
         <div class="d-flex justify-content-end mb-3">
@@ -669,6 +677,7 @@
         <!-- ============================== -->
         <div id="statsView" class="d-none">
             
+            <!-- סקירה כללית -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
                     <h5 class="fw-bold">סקירה כללית (בחדר)</h5>
@@ -703,56 +712,27 @@
                 </div>
             </div>
 
+            <!-- סטטוס התקנות בטבלה מרוכזת -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
-                    <h5 class="fw-bold">דוח התקנות (לכספות חדשות)</h5>
+                    <h5 class="fw-bold">מצב מלאי והתקנות לפי דגם</h5>
                 </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        <h6 class="fw-bold bg-body-secondary p-2 rounded">SDM-100 / SDM-500 (מנעול חובה)</h6>
-                        <ul class="list-group list-group-flush small">
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>✅ מוכנות (עם איתוראן):</span>
-                                <strong class="text-success" id="statSdmReadyBoth">0</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>✅ מוכנות (<span class="fw-bold">ללא איתוראן</span>):</span>
-                                <strong class="text-success" id="statSdmReadyNoIturan">0</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>⏳ ממתינות <span class="fw-bold">לנקישות</span> (יש איתוראן):</span>
-                                <strong class="text-primary" id="statSdmPendingKnockHasIturan">0</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>⏳ ממתינות <span class="fw-bold text-danger">לנקישות</span> (וללא איתוראן):</span>
-                                <strong class="text-danger" id="statSdmPendingBoth">0</strong>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h6 class="fw-bold bg-body-secondary p-2 rounded">שאר הכספות (SUMMIT, CD...)</h6>
-                        <ul class="list-group list-group-flush small">
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>🔹 קיימות <span class="fw-bold">עם איתוראן מותקן</span>:</span>
-                                <strong class="text-primary" id="statOtherReadyWithIturan">0</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
-                                <span>🔸 קיימות <span class="fw-bold">ללא איתוראן</span>:</span>
-                                <strong class="text-muted" id="statOtherReadyNoIturan">0</strong>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
-                    <h5 class="fw-bold">מלאי פעיל לפי דגם</h5>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush" id="statModelsList">
-                        <!-- מתמלא אוטומטית -->
-                    </ul>
+                <div class="card-body p-0 mt-3 table-responsive">
+                    <table class="table table-hover table-bordered border-secondary-subtle align-middle text-center mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th scope="col" class="text-start ps-3" style="min-width: 120px;">סוג כספת</th>
+                                <th scope="col">סה"כ</th>
+                                <th scope="col">איתוראן ✅</th>
+                                <th scope="col">איתוראן ⏳</th>
+                                <th scope="col">נקישות ✅</th>
+                                <th scope="col">נקישות ⏳</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                            <!-- יוזן דרך JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
