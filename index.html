@@ -16,6 +16,9 @@
         .glass-modal { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
         .card { transition: transform 0.2s; }
         .tab-btn { transition: all 0.2s; }
+        /* אפקט ריחוף לריבועי הסטטיסטיקה כדי שיבינו שהם לחיצים */
+        .stat-card { transition: all 0.2s ease-in-out; }
+        .stat-card:hover { transform: scale(1.03); opacity: 0.9; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
     </style>
 
     <script type="module">
@@ -122,8 +125,45 @@
         let showingArchive = false;
         let allSafesData = [];
 
+        // --- לוגיקת סינון לפי רובריקות ---
+        let currentCategoryFilter = 'all';
+        const activeFilterContainer = document.getElementById('activeFilterContainer');
+        const activeFilterText = document.getElementById('activeFilterText');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
+
+        function applyCategoryFilter(filterType, filterName) {
+            currentCategoryFilter = filterType;
+            showingArchive = false; 
+            viewArchiveBtn.innerHTML = '🗄️ היסטוריית יציאות';
+            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
+            listTitle.innerHTML = 'מלאי כספות נוכחי';
+            
+            searchInput.value = ''; 
+            
+            if(filterType !== 'all') {
+                activeFilterContainer.classList.remove('d-none');
+                activeFilterText.innerText = `מציג: ${filterName}`;
+            } else {
+                activeFilterContainer.classList.add('d-none');
+            }
+
+            switchTab('tabInventory', 'inventoryView');
+            renderSafes();
+        }
+
+        document.getElementById('cardStatTotal').addEventListener('click', () => applyCategoryFilter('all', 'סה"כ פעיל'));
+        document.getElementById('cardStatNew').addEventListener('click', () => applyCategoryFilter('new', 'חדשות מהניילון'));
+        document.getElementById('cardStatReturned').addEventListener('click', () => applyCategoryFilter('returned', 'חזרו (סיום פעילות)'));
+        document.getElementById('cardStatCancelled').addEventListener('click', () => applyCategoryFilter('cancelled', 'בוטלה התקנה'));
+        
+        clearFilterBtn.addEventListener('click', () => applyCategoryFilter('all', ''));
+        // ---------------------------------
+
         viewArchiveBtn.addEventListener('click', () => {
             showingArchive = !showingArchive;
+            currentCategoryFilter = 'all'; // איפוס סינון רובריקות כשעוברים לארכיון
+            activeFilterContainer.classList.add('d-none');
+
             if (showingArchive) {
                 viewArchiveBtn.innerHTML = '🔙 חזור למלאי פעיל';
                 viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
@@ -227,11 +267,18 @@
             const filteredSafes = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
-                return matchesArchive && matchesSearch;
+                
+                let matchesCategory = true;
+                if (!showingArchive && currentCategoryFilter !== 'all') {
+                    let actualStatus = safe.data.originStatus || (safe.data.isNewSafe ? 'new' : (safe.data.returnedFromCustomer ? 'returned' : 'unknown'));
+                    matchesCategory = (actualStatus === currentCategoryFilter);
+                }
+
+                return matchesArchive && matchesSearch && matchesCategory;
             });
 
             if (filteredSafes.length === 0) {
-                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה התואמות את החיפוש.</div>`;
+                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה התואמות את הסינון או החיפוש הנוכחי.</div>`;
                 return;
             }
 
@@ -381,13 +428,11 @@
         };
 
         const updateStatsDashboard = (statsObj, allActiveSafes) => {
-            // עדכון חלוניות למעלה
             document.getElementById('statTotal').textContent = statsObj.total;
             document.getElementById('statNew').textContent = statsObj.newSafes;
             document.getElementById('statReturned').textContent = statsObj.returned;
             document.getElementById('statCancelled').textContent = statsObj.cancelled;
 
-            // עיבוד נתונים לטבלה החדשה והנקייה
             const tableStats = {};
             const orderedTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'CD-SMALL (CDS)', 'CD-5', 'CD-7', 'XL'];
             
@@ -407,7 +452,6 @@
                 }
             });
 
-            // יצירת תוכן הטבלה (ללא עמודות "ממתינים")
             const tbody = document.getElementById('statsTableBody');
             tbody.innerHTML = '';
             
@@ -415,7 +459,6 @@
                 const s = tableStats[type];
                 const isSDM = (type === 'SDM-100' || type === 'SDM-500');
 
-                // עיצוב למספרים: בולט אם מעל 0, דהוי ועם מקף אם 0 (למראה נקי יותר)
                 const ituranYesUI = s.ituranYes > 0 ? `<span class="text-success fw-bold fs-6">${s.ituranYes}</span>` : `<span class="text-muted opacity-50">-</span>`;
                 const knockYesUI = isSDM ? (s.knockYes > 0 ? `<span class="text-success fw-bold fs-6">${s.knockYes}</span>` : `<span class="text-muted opacity-50">-</span>`) : `<span class="text-muted opacity-25">-</span>`;
 
@@ -661,6 +704,14 @@
                 <input type="text" id="searchInput" class="form-control border-primary fw-bold text-center" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
+            <!-- תגית הסינון הפעיל -->
+            <div id="activeFilterContainer" class="d-none mb-3">
+                <span class="badge bg-info text-dark fs-6 p-2 d-flex justify-content-between align-items-center shadow-sm">
+                    <span id="activeFilterText">מציג: הכל</span>
+                    <button type="button" class="btn-close btn-close-sm ms-3" aria-label="Close" id="clearFilterBtn"></button>
+                </span>
+            </div>
+
             <div id="safesList">
                 <!-- הרשימה תתרנדר כאן -->
             </div>
@@ -671,34 +722,34 @@
         <!-- ============================== -->
         <div id="statsView" class="d-none">
             
-            <!-- סקירה כללית -->
+            <!-- סקירה כללית (לחיצה על הקוביות תסנן את הרשימה) -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
-                    <h5 class="fw-bold">סקירה כללית (בחדר)</h5>
+                    <h5 class="fw-bold">סקירה כללית <span class="fs-6 text-muted fw-normal">(לחץ על נתון לצפייה ברשימה)</span></h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 text-center">
                         <div class="col-6">
-                            <div class="p-3 border rounded bg-body-secondary h-100">
+                            <div id="cardStatTotal" class="p-3 border rounded bg-body-secondary h-100 cursor-pointer stat-card shadow-sm">
                                 <div class="small fw-bold text-muted">סה"כ פעיל</div>
                                 <div class="fs-3 fw-bolder" id="statTotal">0</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 border rounded border-success-subtle bg-success-subtle h-100">
+                            <div id="cardStatNew" class="p-3 border rounded border-success-subtle bg-success-subtle h-100 cursor-pointer stat-card shadow-sm">
                                 <div class="small fw-bold text-success">חדשות מהניילון</div>
                                 <div class="fs-3 fw-bolder text-success" id="statNew">0</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 border rounded border-warning-subtle bg-warning-subtle h-100">
+                            <div id="cardStatReturned" class="p-3 border rounded border-warning-subtle bg-warning-subtle h-100 cursor-pointer stat-card shadow-sm">
                                 <div class="small fw-bold text-warning-emphasis">חזרו (סיום פעילות)</div>
                                 <div class="fs-3 fw-bolder text-warning-emphasis" id="statReturned">0</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 border rounded border-danger-subtle bg-danger-subtle h-100">
-                                <div class="small fw-bold text-danger">חזרו (בוטלו)</div>
+                            <div id="cardStatCancelled" class="p-3 border rounded border-danger-subtle bg-danger-subtle h-100 cursor-pointer stat-card shadow-sm">
+                                <div class="small fw-bold text-danger">בוטלה התקנה</div>
                                 <div class="fs-3 fw-bolder text-danger" id="statCancelled">0</div>
                             </div>
                         </div>
