@@ -20,7 +20,7 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "6fe106bbbd62e4002350949618b5ab8f";
+        const IMGBB_API_KEY = "הכנס_כאן_את_המפתח_שלך_מ_IMGBB";
         // ===================================
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
@@ -176,6 +176,18 @@
 
             if (!serialNumber || !safeType || !originStatus) return alert('נא למלא את כל שדות החובה.');
 
+            // ---> בדיקת כפילויות חכמה <---
+            // מוודא שהמספר הסידורי לא קיים כבר במלאי הפעיל (כלומר, כספות שטרם יצאו לארכיון)
+            const isDuplicate = allSafesData.some(safe => 
+                safe.data.serialNumber.toLowerCase() === serialNumber.toLowerCase() && safe.data.isArchived === false
+            );
+
+            if (isDuplicate) {
+                alert(`⚠️ שגיאה: כספת עם המספר הסידורי ${serialNumber} כבר נמצאת במלאי הפעיל בחדר!\nאנא ודא שלא סרקת אותה פעמיים.`);
+                return; // עוצר את הפעולה ולא מכניס למסד הנתונים
+            }
+            // -----------------------------
+
             let incomingImageUrl = null;
             if (incomingFileInput.files.length > 0) {
                 if(IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") return alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB.");
@@ -292,7 +304,6 @@
                     if(archToggles) togglesUI = `<div class="mt-2 bg-body-tertiary p-2 rounded border small fw-bold">${archToggles}</div>`;
                 }
 
-                // בלוק פרטי ההוצאה ללקוח (יופיע בארכיון בלבד)
                 const dispatchDetails = (data.isArchived && (data.outgoingCustomer || data.outgoingSafeNumber)) ? `
                     <div class="mt-2 bg-success-subtle p-2 rounded border border-success-subtle small">
                         ${data.outgoingCustomer ? `<div class="text-success-emphasis">📤 יצא ללקוח: <strong>${data.outgoingCustomer}</strong></div>` : ''}
@@ -335,7 +346,7 @@
                         </div>
                     </div>
                     <div class="card-footer bg-transparent border-top-0 pt-0 text-muted small">
-                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold">${daysInRoomText}</span> ${dateString ? `(${dateString})` : ''}`}
+                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
                     </div>
                 `;
                 listContainer.appendChild(div);
@@ -357,8 +368,8 @@
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     currentDispatchId = e.currentTarget.getAttribute('data-id');
-                    dispatchCustomerNameInput.value = ''; // איפוס השדה
-                    dispatchSafeNumberInput.value = '';   // איפוס השדה
+                    dispatchCustomerNameInput.value = ''; 
+                    dispatchSafeNumberInput.value = '';   
                     dispatchModal.classList.remove('d-none');
                 });
             });
