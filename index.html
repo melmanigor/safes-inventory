@@ -22,8 +22,8 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "631f732276d964be8c561efcf3caba84";
-        // ===================================
+        const IMGBB_API_KEY = "631f732276d964be8c561efcf3caba84"
+        // ===============================
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
@@ -120,7 +120,7 @@
         let currentDispatchId = null;
 
         const viewArchiveBtn = document.getElementById('viewArchiveBtn');
-        const exportExcelBtn = document.getElementById('exportExcelBtn'); // כפתור האקסל
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
         const listTitle = document.getElementById('listTitle');
         let showingArchive = false;
         let allSafesData = [];
@@ -128,7 +128,6 @@
         // --- ייצוא לאקסל ---
         exportExcelBtn.addEventListener('click', () => {
             const dataToExport = allSafesData.filter(safe => {
-                // מסננים לפי הצפייה הנוכחית (ארכיון או מלאי פעיל) וגם אם יש סינון קטגוריה
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 let matchesCategory = true;
                 if (!showingArchive && currentCategoryFilter !== 'all') {
@@ -142,7 +141,7 @@
                 return alert("אין נתונים לייצוא.");
             }
 
-            let csvContent = "\uFEFF"; // הגדרת BOM לפתיחה תקינה של עברית באקסל
+            let csvContent = "\uFEFF"; 
             csvContent += "מספר סידורי,סוג כספת,סטטוס בחדר,תאריך קליטה,איתוראן מותקן,מנעול נקישות מותקן,התקבלה מלקוח / בוטלה אצל,הערות קליטה,תאריך יציאה ללקוח,שם לקוח יוצא,מספר כספת יציאה\n";
 
             dataToExport.forEach(safe => {
@@ -155,7 +154,6 @@
                 const hasIturan = d.hasIturan ? 'כן' : 'לא';
                 const hasKnock = d.hasKnockLock ? 'כן' : 'לא';
 
-                // פונקציה לבריחת טקסט (מונע באגים בפסיקים ושורות חדשות באקסל)
                 const escapeCSV = (text) => text ? `"${String(text).replace(/"/g, '""')}"` : '""';
 
                 csvContent += [
@@ -173,7 +171,6 @@
                 ].join(",") + "\n";
             });
 
-            // יצירת קובץ להורדה
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -219,7 +216,7 @@
 
         viewArchiveBtn.addEventListener('click', () => {
             showingArchive = !showingArchive;
-            currentCategoryFilter = 'all'; // איפוס סינון רובריקות כשעוברים לארכיון
+            currentCategoryFilter = 'all'; 
             activeFilterContainer.classList.add('d-none');
 
             if (showingArchive) {
@@ -755,14 +752,18 @@
         <div id="inventoryView" class="d-none">
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                 <h3 id="listTitle" class="fw-bold mb-0">מלאי כספות נוכחי</h3>
-                <div class="d-flex gap-2">
-                    <button id="exportExcelBtn" class="btn btn-sm btn-success fw-bold" title="ייצוא לאקסל">📥 לאקסל</button>
-                    <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ יציאות</button>
-                </div>
+                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ יציאות</button>
             </div>
             
             <div class="mb-3">
                 <input type="text" id="searchInput" class="form-control border-primary fw-bold text-center" placeholder="🔍 חפש כספת לפי מספר סידורי...">
+            </div>
+
+            <!-- כפתור אקסל ששונה שמו -->
+            <div class="mb-3">
+                <button id="exportExcelBtn" class="btn btn-outline-success w-100 fw-bold shadow-sm py-2">
+                    📥 ייצוא לאקסל
+                </button>
             </div>
 
             <!-- תגית הסינון הפעיל -->
