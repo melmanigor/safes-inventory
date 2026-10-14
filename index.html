@@ -22,8 +22,8 @@
 
     <script type="module">
         // ===== הכנס את המפתח שלך כאן =====
-        const IMGBB_API_KEY = "631f732276d964be8c561efcf3caba84"
-        // ===============================
+        const IMGBB_API_KEY = "631f732276d964be8c561efcf3caba84";
+        // ===================================
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
@@ -110,11 +110,15 @@
         const scanBtn = document.getElementById('scanBtn');
         const fileInput = document.getElementById('fileInput');
 
+        // משתני המודאל
         const dispatchModal = document.getElementById('dispatchModal');
         const btnTakeOutgoingPhoto = document.getElementById('btnTakeOutgoingPhoto');
         const btnSkipPhoto = document.getElementById('btnSkipPhoto');
         const btnCancelDispatch = document.getElementById('btnCancelDispatch');
         const outgoingFileInput = document.getElementById('outgoingFileInput');
+        
+        const dispatchTypeSelect = document.getElementById('dispatchTypeSelect');
+        const dispatchCustomerFields = document.getElementById('dispatchCustomerFields');
         const dispatchCustomerNameInput = document.getElementById('dispatchCustomerName');
         const dispatchSafeNumberInput = document.getElementById('dispatchSafeNumber');
         let currentDispatchId = null;
@@ -142,7 +146,7 @@
             }
 
             let csvContent = "\uFEFF"; 
-            csvContent += "מספר סידורי,סוג כספת,סטטוס בחדר,תאריך קליטה,איתוראן מותקן,מנעול נקישות מותקן,התקבלה מלקוח / בוטלה אצל,הערות קליטה,תאריך יציאה ללקוח,שם לקוח יוצא,מספר כספת יציאה\n";
+            csvContent += "מספר סידורי,סוג כספת,סטטוס בחדר,תאריך קליטה,איתוראן מותקן,מנעול נקישות מותקן,התקבלה מלקוח / בוטלה אצל,הערות קליטה,תאריך יציאה/השמדה,מטרת יציאה / לקוח,מספר כספת יציאה\n";
 
             dataToExport.forEach(safe => {
                 const d = safe.data;
@@ -153,6 +157,12 @@
                 const outDate = d.dispatchedAt ? d.dispatchedAt.toDate().toLocaleDateString('he-IL') : '';
                 const hasIturan = d.hasIturan ? 'כן' : 'לא';
                 const hasKnock = d.hasKnockLock ? 'כן' : 'לא';
+                
+                // התאמת עמודת הלקוח היוצא למקרה של השמדה
+                let targetCustomer = d.outgoingCustomer || '';
+                if (d.dispatchType === 'destruction') {
+                    targetCustomer = 'השמדה / גריטה';
+                }
 
                 const escapeCSV = (text) => text ? `"${String(text).replace(/"/g, '""')}"` : '""';
 
@@ -166,7 +176,7 @@
                     escapeCSV(d.customerName),
                     escapeCSV(d.safeConditionNotes),
                     escapeCSV(outDate),
-                    escapeCSV(d.outgoingCustomer),
+                    escapeCSV(targetCustomer),
                     escapeCSV(d.outgoingSafeNumber)
                 ].join(",") + "\n";
             });
@@ -189,7 +199,7 @@
         function applyCategoryFilter(filterType, filterName) {
             currentCategoryFilter = filterType;
             showingArchive = false; 
-            viewArchiveBtn.innerHTML = '🗄️ יציאות';
+            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
             listTitle.innerHTML = 'מלאי כספות נוכחי';
             
@@ -222,9 +232,9 @@
             if (showingArchive) {
                 viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
                 viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
-                listTitle.innerHTML = '📦 היסטוריית יציאות';
+                listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
             } else {
-                viewArchiveBtn.innerHTML = '🗄️ יציאות';
+                viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
                 viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
                 listTitle.innerHTML = 'מלאי כספות נוכחי';
             }
@@ -403,16 +413,28 @@
                     if(archToggles) togglesUI = `<div class="mt-2 bg-body-tertiary p-2 rounded border small fw-bold">${archToggles}</div>`;
                 }
 
-                const dispatchDetails = (data.isArchived && (data.outgoingCustomer || data.outgoingSafeNumber)) ? `
-                    <div class="mt-2 bg-success-subtle p-2 rounded border border-success-subtle small">
-                        ${data.outgoingCustomer ? `<div class="text-success-emphasis">📤 יצא ללקוח: <strong>${data.outgoingCustomer}</strong></div>` : ''}
-                        ${data.outgoingSafeNumber ? `<div class="text-success-emphasis">🔢 מספר כספת שהותקן: <strong>${data.outgoingSafeNumber}</strong></div>` : ''}
-                    </div>
-                ` : '';
+                // בלוק תצוגת ההוצאה / השמדה בארכיון
+                let dispatchDetails = '';
+                if (data.isArchived) {
+                    if (data.dispatchType === 'destruction') {
+                        dispatchDetails = `
+                            <div class="mt-2 bg-danger-subtle p-2 rounded border border-danger-subtle small">
+                                <div class="text-danger-emphasis fw-bold">🔥 נשלח להשמדה / גריטה</div>
+                            </div>
+                        `;
+                    } else if (data.outgoingCustomer || data.outgoingSafeNumber) {
+                        dispatchDetails = `
+                            <div class="mt-2 bg-success-subtle p-2 rounded border border-success-subtle small">
+                                ${data.outgoingCustomer ? `<div class="text-success-emphasis">📤 יצא ללקוח: <strong>${data.outgoingCustomer}</strong></div>` : ''}
+                                ${data.outgoingSafeNumber ? `<div class="text-success-emphasis">🔢 מספר כספת שהותקן: <strong>${data.outgoingSafeNumber}</strong></div>` : ''}
+                            </div>
+                        `;
+                    }
+                }
 
                 const actionButton = showingArchive 
                     ? `<button class="btn btn-outline-success btn-sm rounded-circle restore-btn" data-id="${id}" title="החזר למלאי הפעיל">🔙</button>`
-                    : `<button class="btn btn-outline-danger btn-sm rounded-circle delete-btn" data-id="${id}" title="הוצא ללקוח">📤</button>`;
+                    : `<button class="btn btn-outline-danger btn-sm rounded-circle delete-btn" data-id="${id}" title="הוצא מהחדר">📤</button>`;
 
                 const div = document.createElement('div');
                 div.className = "card mb-3 shadow-sm border-secondary-subtle";
@@ -469,13 +491,15 @@
                     currentDispatchId = e.currentTarget.getAttribute('data-id');
                     dispatchCustomerNameInput.value = ''; 
                     dispatchSafeNumberInput.value = '';   
+                    dispatchTypeSelect.value = 'customer'; // איפוס לברירת מחדל
+                    dispatchCustomerFields.classList.remove('d-none'); // איפוס תצוגה
                     dispatchModal.classList.remove('d-none');
                 });
             });
 
             document.querySelectorAll('.restore-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    if (confirm('להחזיר כספת זו למלאי הפעיל בחדר? (תמונת היציאה ופרטי הלקוח יישמרו)')) {
+                    if (confirm('להחזיר כספת זו למלאי הפעיל בחדר? (תמונת היציאה ופרטי הלקוח/השמדה יישמרו)')) {
                         await updateDoc(doc(db, 'safes', e.currentTarget.getAttribute('data-id')), { isArchived: false, dispatchedAt: null });
                     }
                 });
@@ -528,6 +552,15 @@
             });
         };
 
+        // לוגיקה לשינוי סוג היציאה במודאל
+        dispatchTypeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'destruction') {
+                dispatchCustomerFields.classList.add('d-none');
+            } else {
+                dispatchCustomerFields.classList.remove('d-none');
+            }
+        });
+
         btnCancelDispatch.addEventListener('click', () => {
             dispatchModal.classList.add('d-none');
             currentDispatchId = null;
@@ -536,17 +569,21 @@
         btnSkipPhoto.addEventListener('click', async () => {
             if(!currentDispatchId) return;
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
-            if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
+            const dispatchType = dispatchTypeSelect.value;
+
+            // אזהרה על מנעול נקישות רלוונטית רק אם זה יוצא להתקנה אצל לקוח
+            if (dispatchType === 'customer' && safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
                 if (!confirm("⚠️ שים לב! כספת זו מוגדרת ללא מנעול נקישות למרות שזה חובה. האם אתה בטוח שברצונך להוציא אותה מהמלאי?")) return;
             }
 
-            const customer = dispatchCustomerNameInput.value.trim();
-            const safeNum = dispatchSafeNumberInput.value.trim();
+            const customer = dispatchType === 'customer' ? dispatchCustomerNameInput.value.trim() : '';
+            const safeNum = dispatchType === 'customer' ? dispatchSafeNumberInput.value.trim() : '';
 
             btnSkipPhoto.innerHTML = '<span class="spinner-border spinner-border-sm"></span> מעדכן...';
             await updateDoc(doc(db, 'safes', currentDispatchId), { 
                 isArchived: true, 
                 dispatchedAt: serverTimestamp(),
+                dispatchType: dispatchType,
                 outgoingCustomer: customer,
                 outgoingSafeNumber: safeNum
             });
@@ -557,7 +594,9 @@
         btnTakeOutgoingPhoto.addEventListener('click', () => {
             if(IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") return alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB בקוד.");
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
-            if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
+            const dispatchType = dispatchTypeSelect.value;
+
+            if (dispatchType === 'customer' && safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
                 if (!confirm("⚠️ שים לב! כספת זו מוגדרת ללא מנעול נקישות למרות שזה חובה. האם להמשיך להוצאה וצילום?")) return;
             }
             outgoingFileInput.click();
@@ -567,8 +606,9 @@
             const file = e.target.files[0];
             if (!file || !currentDispatchId) return;
             
-            const customer = dispatchCustomerNameInput.value.trim();
-            const safeNum = dispatchSafeNumberInput.value.trim();
+            const dispatchType = dispatchTypeSelect.value;
+            const customer = dispatchType === 'customer' ? dispatchCustomerNameInput.value.trim() : '';
+            const safeNum = dispatchType === 'customer' ? dispatchSafeNumberInput.value.trim() : '';
 
             btnTakeOutgoingPhoto.innerHTML = '<span class="spinner-border spinner-border-sm"></span> מעלה...';
             btnTakeOutgoingPhoto.disabled = true; btnSkipPhoto.disabled = true;
@@ -577,14 +617,15 @@
                 await updateDoc(doc(db, 'safes', currentDispatchId), { 
                     isArchived: true, 
                     dispatchedAt: serverTimestamp(), 
+                    dispatchType: dispatchType,
                     outgoingImageUrl: url,
                     outgoingCustomer: customer,
                     outgoingSafeNumber: safeNum 
                 });
                 dispatchModal.classList.add('d-none');
-            } catch (error) { alert("שגיאה בהעלאת תמונת היציאה."); } 
+            } catch (error) { alert("שגיאה בהעלאת התמונת יציאה/השמדה."); } 
             finally {
-                btnTakeOutgoingPhoto.innerHTML = '📸 צלם כספת יוצאת';
+                btnTakeOutgoingPhoto.innerHTML = '📸 צלם כספת';
                 btnTakeOutgoingPhoto.disabled = false; btnSkipPhoto.disabled = false;
                 outgoingFileInput.value = '';
             }
@@ -752,14 +793,14 @@
         <div id="inventoryView" class="d-none">
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                 <h3 id="listTitle" class="fw-bold mb-0">מלאי כספות נוכחי</h3>
-                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ יציאות</button>
+                <button id="viewArchiveBtn" class="btn btn-sm btn-secondary fw-bold">🗄️ יציאות והשמדות</button>
             </div>
             
             <div class="mb-3">
                 <input type="text" id="searchInput" class="form-control border-primary fw-bold text-center" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
-            <!-- כפתור אקסל ששונה שמו -->
+            <!-- כפתור אקסל -->
             <div class="mb-3">
                 <button id="exportExcelBtn" class="btn btn-outline-success w-100 fw-bold shadow-sm py-2">
                     📥 ייצוא לאקסל
@@ -849,25 +890,35 @@
 
     </div>
 
-    <!-- מודאל יציאה מותאם ל-Bootstrap -->
+    <!-- מודאל יציאה מותאם עם תמיכה בהשמדה/גריטה -->
     <div id="dispatchModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
         <div class="card w-100 shadow-lg border-0" style="max-width: 400px;">
             <div class="card-body p-4 text-center">
-                <h4 class="fw-bolder mb-3">הוצאת כספת ללקוח</h4>
-                <p class="text-muted small mb-3">הזן פרטי יציאה ותעד את מצב הכספת לפני שהיא יוצאת מהחדר.</p>
+                <h4 class="fw-bolder mb-3">הוצאה מהמלאי</h4>
+                <p class="text-muted small mb-3">בחר את מטרת היציאה מהחדר.</p>
                 
                 <div class="mb-3 text-start">
-                    <label class="form-label small fw-bold">שם הלקוח (לאן הכספת יוצאת?)</label>
-                    <input type="text" id="dispatchCustomerName" class="form-control" placeholder="הכנס שם לקוח">
-                </div>
-                <div class="mb-4 text-start">
-                    <label class="form-label small fw-bold">מספר כספת (אופציונלי)</label>
-                    <input type="text" id="dispatchSafeNumber" class="form-control" placeholder="הכנס מספר כספת">
+                    <label class="form-label small fw-bold">סוג יציאה מהחדר:</label>
+                    <select id="dispatchTypeSelect" class="form-select bg-body-tertiary fw-bold">
+                        <option value="customer">🚚 יציאה להתקנה אצל לקוח</option>
+                        <option value="destruction">🔥 שליחה להשמדה / גריטה</option>
+                    </select>
                 </div>
 
-                <div class="d-flex flex-column gap-2">
-                    <button id="btnTakeOutgoingPhoto" class="btn btn-primary fw-bold py-2">📸 צלם כספת יוצאת</button>
-                    <button id="btnSkipPhoto" class="btn btn-secondary fw-bold py-2">המשך ללא תמונה</button>
+                <div id="dispatchCustomerFields">
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-bold">שם הלקוח (לאן הכספת יוצאת?)</label>
+                        <input type="text" id="dispatchCustomerName" class="form-control" placeholder="הכנס שם לקוח">
+                    </div>
+                    <div class="mb-4 text-start">
+                        <label class="form-label small fw-bold">מספר כספת (אופציונלי)</label>
+                        <input type="text" id="dispatchSafeNumber" class="form-control" placeholder="הכנס מספר כספת">
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-4">
+                    <button id="btnTakeOutgoingPhoto" class="btn btn-primary fw-bold py-2">📸 צלם כספת והוצא</button>
+                    <button id="btnSkipPhoto" class="btn btn-secondary fw-bold py-2">הוצא ללא תמונה</button>
                     <button id="btnCancelDispatch" class="btn btn-link text-danger fw-bold text-decoration-none mt-2">ביטול</button>
                 </div>
                 <input type="file" id="outgoingFileInput" accept="image/*" capture="environment" class="d-none">
