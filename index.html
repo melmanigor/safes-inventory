@@ -199,6 +199,9 @@
             if (onlyIturanFilter) {
                 parts.push('מציג: עם איתוראן בלבד');
             }
+            if (showingArchive) {
+                parts.push('מציג: היסטוריית יציאות והשמדות');
+            }
 
             if (parts.length > 0) {
                 activeFilterContainer.classList.remove('d-none');
@@ -240,6 +243,23 @@
             renderSafes();
         }
 
+        function applyArchiveFilterFromStats() {
+            showingArchive = true;
+            currentCategoryFilter = 'all';
+            currentCategoryName = '';
+            currentModelFilter = 'all';
+            onlyIturanFilter = false;
+            modelFilterSelect.value = 'all';
+            viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
+            viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
+            listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
+
+            searchInput.value = '';
+            updateActiveFilterBadge();
+            switchTab('tabInventory', 'inventoryView');
+            renderSafes();
+        }
+
         function applyModelFilterFromStats(modelType) {
             currentModelFilter = modelType;
             modelFilterSelect.value = modelType;
@@ -266,6 +286,7 @@
         document.getElementById('cardStatNew').addEventListener('click', () => applyCategoryFilter('new', 'חדשות מהניילון'));
         document.getElementById('cardStatReturned').addEventListener('click', () => applyCategoryFilter('returned', 'חזרו (סיום פעילות)'));
         document.getElementById('cardStatCancelled').addEventListener('click', () => applyCategoryFilter('cancelled', 'בוטלה התקנה'));
+        document.getElementById('cardStatArchive').addEventListener('click', () => applyArchiveFilterFromStats());
         
         modelFilterSelect.addEventListener('change', (e) => {
             currentModelFilter = e.target.value;
@@ -278,13 +299,17 @@
             currentCategoryName = '';
             currentModelFilter = 'all';
             onlyIturanFilter = false;
+            showingArchive = false;
             modelFilterSelect.value = 'all';
+            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
+            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
+            listTitle.innerHTML = 'מלאי כספות נוכחי';
             updateActiveFilterBadge();
             renderSafes();
         });
         // ---------------------------------
 
-        // --- ייצוא לאקסל (מתחשב גם בסינון איתוראן, דגם וחיפוש) ---
+        // --- ייצוא לאקסל (מתחשב גם בסינון איתוראן, דגם, ארכיון וחיפוש) ---
         exportExcelBtn.addEventListener('click', () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
 
@@ -635,7 +660,7 @@
             });
         };
 
-        const updateStatsDashboard = (statsObj, allActiveSafes) => {
+        const updateStatsDashboard = (statsObj, allActiveSafes, snapshot) => {
             document.getElementById('statTotal').textContent = statsObj.total;
             document.getElementById('statNew').textContent = statsObj.newSafes;
             document.getElementById('statReturned').textContent = statsObj.returned;
@@ -646,6 +671,13 @@
                 if (safe.data.hasIturan) totalIturan++;
             });
             document.getElementById('statIturan').textContent = totalIturan;
+
+            // ספירת סה"כ כספות בארכיון (יציאות והשמדות)
+            let totalArchive = 0;
+            snapshot.forEach(docSnap => {
+                if (docSnap.data().isArchived) totalArchive++;
+            });
+            document.getElementById('statArchive').textContent = totalArchive;
 
             const tableStats = {};
             const orderedTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'CD-SMALL (CDS)', 'CD-5', 'CD-7', 'XL'];
@@ -789,7 +821,7 @@
                 }
             });
 
-            updateStatsDashboard(stats, activeSafes);
+            updateStatsDashboard(stats, activeSafes, snapshot);
             renderSafes();
         });
 
@@ -1101,7 +1133,6 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <!-- נוסף כאן id="cardStatIturan" כדי שהלחיצה תעבוד -->
                         <div id="cardStatIturan" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-info">
                             <div class="small fw-bold text-info mb-1">📡 סה"כ עם איתוראן</div>
                             <div class="fs-1 fw-bolder text-info car-metric-value" id="statIturan">0</div>
@@ -1117,6 +1148,13 @@
                         <div id="cardStatReturned" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-warning">
                             <div class="small fw-bold text-warning mb-1">🔄 חזרו (סיום פעילות)</div>
                             <div class="fs-2 fw-bolder text-warning car-metric-value" id="statReturned">0</div>
+                        </div>
+                    </div>
+                    <!-- קוביית יציאות והשמדות החדשה -->
+                    <div class="col-12">
+                        <div id="cardStatArchive" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-secondary">
+                            <div class="small fw-bold text-secondary mb-1">📦 יציאות והשמדות (ארכיון)</div>
+                            <div class="fs-2 fw-bolder text-light car-metric-value" id="statArchive">0</div>
                         </div>
                     </div>
                     <div class="col-12">
