@@ -309,7 +309,7 @@
         });
         // ---------------------------------
 
-        // --- ייצוא לאקסל (מתחשב גם בסינון איתוראן, דגם, ארכיון וחיפוש) ---
+        // --- ייצוא לאקסל ---
         exportExcelBtn.addEventListener('click', () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
 
@@ -537,36 +537,29 @@
 
                 let togglesUI = '';
                 
-                if (!showingArchive && actualStatus === 'new') {
-                    let checkboxesHTML = '';
-                    if (isSDM) {
-                        checkboxesHTML += `
-                            <div class="form-check form-switch bg-body-tertiary p-2 rounded border mb-2 d-flex align-items-center">
-                                <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasKnockLock" ${data.hasKnockLock ? 'checked' : ''}>
-                                <label class="form-check-label small fw-bold cursor-pointer ${data.hasKnockLock ? 'text-primary' : 'text-body-secondary'}">
-                                    ${data.hasKnockLock ? '✅ מנעול נקישות הותקן' : '⏳ מנעול נקישות (חובה)'}
-                                </label>
-                            </div>
-                        `;
-                    }
-                    if (canHaveIturan) {
-                        checkboxesHTML += `
-                            <div class="form-check form-switch bg-body-tertiary p-2 rounded border d-flex align-items-center">
-                                <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasIturan" ${data.hasIturan ? 'checked' : ''}>
-                                <label class="form-check-label small fw-bold cursor-pointer ${data.hasIturan ? 'text-primary' : 'text-body-secondary'}">
-                                    ${data.hasIturan ? '✅ איתוראן הותקן' : 'איתוראן (אופציונלי)'}
-                                </label>
-                            </div>
-                        `;
-                    }
-                    if(checkboxesHTML) togglesUI = `<div class="mt-3">${checkboxesHTML}</div>`;
+                // מאפשר עדכון מהיר גם במלאי הפעיל וגם בארכיון לצורך תיקון טעויות
+                let checkboxesHTML = '';
+                if (isSDM) {
+                    checkboxesHTML += `
+                        <div class="form-check form-switch bg-body-tertiary p-2 rounded border mb-2 d-flex align-items-center">
+                            <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasKnockLock" ${data.hasKnockLock ? 'checked' : ''}>
+                            <label class="form-check-label small fw-bold cursor-pointer ${data.hasKnockLock ? 'text-primary' : 'text-body-secondary'}">
+                                ${data.hasKnockLock ? '✅ מנעול נקישות הותקן' : '⏳ מנעול נקישות (חובה)'}
+                            </label>
+                        </div>
+                    `;
                 }
-                else if (showingArchive || data.hasIturan || data.hasKnockLock) {
-                    let archToggles = '';
-                    if (isSDM) archToggles += `<div class="${data.hasKnockLock ? 'text-success' : 'text-danger'}"> ${data.hasKnockLock ? '✅ מנעול נקישות הותקן' : '❌ ללא מנעול נקישות'}</div>`;
-                    if (canHaveIturan) archToggles += `<div class="${data.hasIturan ? 'text-success' : 'text-muted'}"> ${data.hasIturan ? '✅ איתוראן הותקן' : '➖ ללא איתוראן'}</div>`;
-                    if(archToggles) togglesUI = `<div class="mt-2 bg-body-tertiary p-2 rounded border small fw-bold">${archToggles}</div>`;
+                if (canHaveIturan) {
+                    checkboxesHTML += `
+                        <div class="form-check form-switch bg-body-tertiary p-2 rounded border d-flex align-items-center">
+                            <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasIturan" ${data.hasIturan ? 'checked' : ''}>
+                            <label class="form-check-label small fw-bold cursor-pointer ${data.hasIturan ? 'text-primary' : 'text-body-secondary'}">
+                                ${data.hasIturan ? '✅ איתוראן הותקן' : 'איתוראן (אופציונלי)'}
+                            </label>
+                        </div>
+                    `;
                 }
+                if(checkboxesHTML) togglesUI = `<div class="mt-3">${checkboxesHTML}</div>`;
 
                 let dispatchDetails = '';
                 if (data.isArchived) {
@@ -643,6 +636,14 @@
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     currentDispatchId = e.currentTarget.getAttribute('data-id');
+                    
+                    // בדיקת חסימה עבור דגמי SDM-100 או SDM-500 שאין להם מנעול נקישות
+                    const safeObj = allSafesData.find(s => s.id === currentDispatchId);
+                    if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
+                        alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
+                        return; // עוצר לחלוטין ומונע פתיחת חלון הוצאה
+                    }
+
                     dispatchCustomerNameInput.value = ''; 
                     dispatchSafeNumberInput.value = '';   
                     dispatchTypeSelect.value = 'customer'; 
@@ -672,7 +673,6 @@
             });
             document.getElementById('statIturan').textContent = totalIturan;
 
-            // ספירת סה"כ כספות בארכיון (יציאות והשמדות)
             let totalArchive = 0;
             snapshot.forEach(docSnap => {
                 if (docSnap.data().isArchived) totalArchive++;
@@ -740,8 +740,9 @@
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
             const dispatchType = dispatchTypeSelect.value;
 
-            if (dispatchType === 'customer' && safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
-                if (!confirm("⚠️ שים לב! כספת זו מוגדרת ללא מנעול נקישות למרות שזה חובה. האם אתה בטוח שברצונך להוציא אותה מהמלאי?")) return;
+            if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
+                alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
+                return;
             }
 
             const customer = dispatchType === 'customer' ? dispatchCustomerNameInput.value.trim() : '';
@@ -764,8 +765,9 @@
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
             const dispatchType = dispatchTypeSelect.value;
 
-            if (dispatchType === 'customer' && safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock && safeObj.data.originStatus === 'new') {
-                if (!confirm("⚠️ שים לב! כספת זו מוגדרת ללא מנעול נקישות למרות שזה חובה. האם להמשיך להוצאה וצילום?")) return;
+            if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
+                alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
+                return;
             }
             outgoingFileInput.click();
         });
@@ -1150,7 +1152,6 @@
                             <div class="fs-2 fw-bolder text-warning car-metric-value" id="statReturned">0</div>
                         </div>
                     </div>
-                    <!-- קוביית יציאות והשמדות החדשה -->
                     <div class="col-12">
                         <div id="cardStatArchive" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-secondary">
                             <div class="small fw-bold text-secondary mb-1">📦 יציאות והשמדות (ארכיון)</div>
