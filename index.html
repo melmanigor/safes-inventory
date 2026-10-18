@@ -578,6 +578,13 @@
             document.getElementById('statReturned').textContent = statsObj.returned;
             document.getElementById('statCancelled').textContent = statsObj.cancelled;
 
+            // ספירת סה"כ כספות פעילות עם איתוראן מותקן
+            let totalIturan = 0;
+            allActiveSafes.forEach(safe => {
+                if (safe.data.hasIturan) totalIturan++;
+            });
+            document.getElementById('statIturan').textContent = totalIturan;
+
             const tableStats = {};
             const orderedTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'CD-SMALL (CDS)', 'CD-5', 'CD-7', 'XL'];
             
@@ -659,7 +666,7 @@
         });
 
         btnTakeOutgoingPhoto.addEventListener('click', () => {
-            if(IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") return alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB בקוד.");
+            if(IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") return alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB.");
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
             const dispatchType = dispatchTypeSelect.value;
 
@@ -986,7 +993,7 @@
                 <input type="text" id="searchInput" class="form-control border-primary fw-bold text-center" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
-            <!-- סינון חדש לפי דגם כספת -->
+            <!-- סינון לפי דגם כספת -->
             <div class="mb-3">
                 <select id="modelFilterSelect" class="form-select fw-bold text-center border-secondary-subtle">
                     <option value="all">🗂️ כל הדגמים (ללא סינון דגם)</option>
@@ -1021,38 +1028,44 @@
         </div>
 
         <!-- ============================== -->
-        <!-- תצוגה 3: דוח מנהלים -->
+        <!-- תצוגה 3: דוח מנהלים (דשבורד) -->
         <!-- ============================== -->
         <div id="statsView" class="d-none">
             
             <!-- סקירה כללית -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
-                    <h5 class="fw-bold">סקירה כללית <span class="fs-6 text-muted fw-normal">(לחץ על נתון לצפייה ברשימה)</span></h5>
+                    <h5 class="fw-bold">דשבורד ניהולי <span class="fs-6 text-muted fw-normal">(לחץ על נתון לצפייה ברשימה)</span></h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 text-center">
                         <div class="col-6">
                             <div id="cardStatTotal" class="p-3 border rounded bg-body-secondary h-100 cursor-pointer stat-card shadow-sm">
-                                <div class="small fw-bold text-muted">סה"כ פעיל</div>
+                                <div class="small fw-bold text-muted">סה"כ פעיל בחדר</div>
                                 <div class="fs-3 fw-bolder" id="statTotal">0</div>
                             </div>
                         </div>
                         <div class="col-6">
+                            <div class="p-3 border rounded border-primary-subtle bg-primary-subtle h-100 stat-card shadow-sm">
+                                <div class="small fw-bold text-primary">📡 סה"כ עם איתוראן</div>
+                                <div class="fs-3 fw-bolder text-primary" id="statIturan">0</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
                             <div id="cardStatNew" class="p-3 border rounded border-success-subtle bg-success-subtle h-100 cursor-pointer stat-card shadow-sm">
-                                <div class="small fw-bold text-success">חדשות מהניילון</div>
+                                <div class="small fw-bold text-success">⭐ חדשות מהניילון</div>
                                 <div class="fs-3 fw-bolder text-success" id="statNew">0</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div id="cardStatReturned" class="p-3 border rounded border-warning-subtle bg-warning-subtle h-100 cursor-pointer stat-card shadow-sm">
-                                <div class="small fw-bold text-warning-emphasis">חזרו (סיום פעילות)</div>
+                                <div class="small fw-bold text-warning-emphasis">🔄 חזרו (סיום פעילות)</div>
                                 <div class="fs-3 fw-bolder text-warning-emphasis" id="statReturned">0</div>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-12">
                             <div id="cardStatCancelled" class="p-3 border rounded border-danger-subtle bg-danger-subtle h-100 cursor-pointer stat-card shadow-sm">
-                                <div class="small fw-bold text-danger">בוטלה התקנה</div>
+                                <div class="small fw-bold text-danger">❌ בטלו התקנה</div>
                                 <div class="fs-3 fw-bolder text-danger" id="statCancelled">0</div>
                             </div>
                         </div>
@@ -1063,7 +1076,7 @@
             <!-- סטטוס התקנות בטבלה מרוכזת נקייה -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
-                    <h5 class="fw-bold">מצב מלאי והתקנות לפי דגם <span class="fs-6 text-muted fw-normal">(לחץ על דגם לסינון)</span></h5>
+                    <h5 class="fw-bold">מצב מלאי והתקנות לפי דגם <span class="fs-6 text-muted fw-normal">(לחץ על שורת דגם לסינון)</span></h5>
                 </div>
                 <div class="card-body p-0 mt-3 table-responsive">
                     <table class="table table-hover table-bordered border-secondary-subtle align-middle text-center mb-0">
@@ -1071,7 +1084,7 @@
                             <tr>
                                 <th scope="col" class="text-start ps-3" style="min-width: 120px;">סוג כספת</th>
                                 <th scope="col">סה"כ</th>
-                                <th scope="col">איתוראן ✅</th>
+                                <th scope="col">איתוראן 📡</th>
                                 <th scope="col">נקישות ✅</th>
                             </tr>
                         </thead>
