@@ -183,6 +183,7 @@
         let currentCategoryFilter = 'all';
         let currentCategoryName = '';
         let currentModelFilter = 'all';
+        let onlyIturanFilter = false; 
         const activeFilterContainer = document.getElementById('activeFilterContainer');
         const activeFilterText = document.getElementById('activeFilterText');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
@@ -194,6 +195,9 @@
             }
             if (currentModelFilter !== 'all') {
                 parts.push(`דגם: ${currentModelFilter}`);
+            }
+            if (onlyIturanFilter) {
+                parts.push('מציג: עם איתוראן בלבד');
             }
 
             if (parts.length > 0) {
@@ -207,6 +211,7 @@
         function applyCategoryFilter(filterType, filterName) {
             currentCategoryFilter = filterType;
             currentCategoryName = filterName;
+            onlyIturanFilter = false;
             showingArchive = false; 
             viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
@@ -218,11 +223,29 @@
             renderSafes();
         }
 
+        function applyIturanFilter() {
+            onlyIturanFilter = true;
+            currentCategoryFilter = 'all';
+            currentCategoryName = '';
+            currentModelFilter = 'all';
+            modelFilterSelect.value = 'all';
+            showingArchive = false;
+            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
+            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
+            listTitle.innerHTML = 'מלאי כספות נוכחי (עם איתוראן)';
+
+            searchInput.value = '';
+            updateActiveFilterBadge();
+            switchTab('tabInventory', 'inventoryView');
+            renderSafes();
+        }
+
         function applyModelFilterFromStats(modelType) {
             currentModelFilter = modelType;
             modelFilterSelect.value = modelType;
             currentCategoryFilter = 'all';
             currentCategoryName = '';
+            onlyIturanFilter = false;
             showingArchive = false;
             viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
@@ -239,6 +262,7 @@
             modelFilterSelect.value = 'all';
             applyCategoryFilter('all', '');
         });
+        document.getElementById('cardStatIturan').addEventListener('click', () => applyIturanFilter());
         document.getElementById('cardStatNew').addEventListener('click', () => applyCategoryFilter('new', 'חדשות מהניילון'));
         document.getElementById('cardStatReturned').addEventListener('click', () => applyCategoryFilter('returned', 'חזרו (סיום פעילות)'));
         document.getElementById('cardStatCancelled').addEventListener('click', () => applyCategoryFilter('cancelled', 'בוטלה התקנה'));
@@ -253,13 +277,14 @@
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             currentModelFilter = 'all';
+            onlyIturanFilter = false;
             modelFilterSelect.value = 'all';
             updateActiveFilterBadge();
             renderSafes();
         });
         // ---------------------------------
 
-        // --- ייצוא לאקסל (מתחשב גם בסינון דגם וחיפוש) ---
+        // --- ייצוא לאקסל (מתחשב גם בסינון איתוראן, דגם וחיפוש) ---
         exportExcelBtn.addEventListener('click', () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
 
@@ -267,13 +292,14 @@
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
                 const matchesModel = (currentModelFilter === 'all') || (safe.data.safeType === currentModelFilter);
+                const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
 
                 let matchesCategory = true;
                 if (!showingArchive && currentCategoryFilter !== 'all') {
                     let actualStatus = safe.data.originStatus || (safe.data.isNewSafe ? 'new' : (safe.data.returnedFromCustomer ? 'returned' : 'unknown'));
                     matchesCategory = (actualStatus === currentCategoryFilter);
                 }
-                return matchesArchive && matchesSearch && matchesModel && matchesCategory;
+                return matchesArchive && matchesSearch && matchesModel && matchesIturan && matchesCategory;
             });
 
             if (dataToExport.length === 0) {
@@ -328,6 +354,7 @@
             showingArchive = !showingArchive;
             currentCategoryFilter = 'all'; 
             currentCategoryName = '';
+            onlyIturanFilter = false;
             updateActiveFilterBadge();
 
             if (showingArchive) {
@@ -434,6 +461,7 @@
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
                 const matchesModel = (currentModelFilter === 'all') || (safe.data.safeType === currentModelFilter);
+                const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
                 
                 let matchesCategory = true;
                 if (!showingArchive && currentCategoryFilter !== 'all') {
@@ -441,7 +469,7 @@
                     matchesCategory = (actualStatus === currentCategoryFilter);
                 }
 
-                return matchesArchive && matchesSearch && matchesModel && matchesCategory;
+                return matchesArchive && matchesSearch && matchesModel && matchesIturan && matchesCategory;
             });
 
             if (filteredSafes.length === 0) {
@@ -1073,7 +1101,8 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="car-dashboard-card p-3 h-100 stat-card border-info">
+                        <!-- נוסף כאן id="cardStatIturan" כדי שהלחיצה תעבוד -->
+                        <div id="cardStatIturan" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-info">
                             <div class="small fw-bold text-info mb-1">📡 סה"כ עם איתוראן</div>
                             <div class="fs-1 fw-bolder text-info car-metric-value" id="statIturan">0</div>
                         </div>
