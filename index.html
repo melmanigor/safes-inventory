@@ -53,6 +53,30 @@
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
         }
 
+        /* כפתורי רובריקות דגמים ברשימות */
+        .model-rubric-btn {
+            background: #131c31;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #94a3b8;
+            border-radius: 10px;
+            font-weight: 700;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            flex: 1 1 auto;
+            text-align: center;
+        }
+        .model-rubric-btn:hover {
+            border-color: #60a5fa;
+            color: #fff;
+        }
+        .model-rubric-btn.active {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+        }
+
         .car-metric-value {
             font-family: monospace;
             letter-spacing: 1px;
@@ -148,9 +172,9 @@
         const hasIturanInput = document.getElementById('hasIturan');
         
         const allowedIturanTypes = ['SDM-100', 'SDM-500', 'SUMMIT', 'XL'];
+        const cashdroTypes = ['CD-SMALL (CDS)', 'CD-5', 'CD-7'];
         const listContainer = document.getElementById('safesList');
         const searchInput = document.getElementById('searchInput');
-        const modelFilterSelect = document.getElementById('modelFilterSelect');
         const fileInput = document.getElementById('fileInput');
 
         // משתני המודאל ליציאה
@@ -188,13 +212,69 @@
         const activeFilterText = document.getElementById('activeFilterText');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
 
+        // פונקציית עזר לבדיקת התאמת דגם (כולל קבוצת CASHDRO)
+        function checkModelMatch(safeType, filterVal) {
+            if (filterVal === 'all') return true;
+            if (filterVal === 'CASHDRO') return cashdroTypes.includes(safeType);
+            return safeType === filterVal;
+        }
+
+        // הדגשת הכפתור הפעיל בשורת הרובריקות
+        function highlightModelRubricButtons() {
+            document.querySelectorAll('.model-rubric-btn').forEach(btn => {
+                const btnModel = btn.getAttribute('data-model');
+                if (btnModel === currentModelFilter || (cashdroTypes.includes(currentModelFilter) && btnModel === 'CASHDRO')) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // עדכון המונים על כפתורי הרובריקות לפי התצוגה הנוכחית
+        function updateRubricCounts() {
+            const baseList = allSafesData.filter(safe => {
+                const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
+                const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
+                let matchesCategory = true;
+                if (!showingArchive && currentCategoryFilter !== 'all') {
+                    let actualStatus = safe.data.originStatus || (safe.data.isNewSafe ? 'new' : (safe.data.returnedFromCustomer ? 'returned' : 'unknown'));
+                    matchesCategory = (actualStatus === currentCategoryFilter);
+                }
+                return matchesArchive && matchesIturan && matchesCategory;
+            });
+
+            const counts = {
+                'all': baseList.length,
+                'SDM-100': 0,
+                'SDM-500': 0,
+                'SUMMIT': 0,
+                'XL': 0,
+                'CASHDRO': 0
+            };
+
+            baseList.forEach(s => {
+                const t = s.data.safeType;
+                if (counts[t] !== undefined) counts[t]++;
+                if (cashdroTypes.includes(t)) counts['CASHDRO']++;
+            });
+
+            document.querySelectorAll('.model-rubric-btn').forEach(btn => {
+                const m = btn.getAttribute('data-model');
+                const label = btn.getAttribute('data-label');
+                if (counts[m] !== undefined) {
+                    btn.innerHTML = `${label} <span class=" opacity-75">(${counts[m]})</span>`;
+                }
+            });
+        }
+
         function updateActiveFilterBadge() {
             const parts = [];
             if (!showingArchive && currentCategoryFilter !== 'all' && currentCategoryName) {
                 parts.push(`סטטוס: ${currentCategoryName}`);
             }
             if (currentModelFilter !== 'all') {
-                parts.push(`דגם: ${currentModelFilter}`);
+                parts.push(`רובריקה: ${currentModelFilter}`);
             }
             if (onlyIturanFilter) {
                 parts.push('מציג: עם איתוראן בלבד');
@@ -209,7 +289,17 @@
             } else {
                 activeFilterContainer.classList.add('d-none');
             }
+            highlightModelRubricButtons();
         }
+
+        // חיבור כפתורי הרובריקות ברשימות
+        document.querySelectorAll('.model-rubric-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentModelFilter = btn.getAttribute('data-model');
+                updateActiveFilterBadge();
+                renderSafes();
+            });
+        });
 
         function applyCategoryFilter(filterType, filterName) {
             currentCategoryFilter = filterType;
@@ -231,7 +321,6 @@
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             currentModelFilter = 'all';
-            modelFilterSelect.value = 'all';
             showingArchive = false;
             viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
@@ -249,7 +338,6 @@
             currentCategoryName = '';
             currentModelFilter = 'all';
             onlyIturanFilter = false;
-            modelFilterSelect.value = 'all';
             viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
             viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
             listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
@@ -262,7 +350,6 @@
 
         function applyModelFilterFromStats(modelType) {
             currentModelFilter = modelType;
-            modelFilterSelect.value = modelType;
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             onlyIturanFilter = false;
@@ -279,7 +366,6 @@
 
         document.getElementById('cardStatTotal').addEventListener('click', () => {
             currentModelFilter = 'all';
-            modelFilterSelect.value = 'all';
             applyCategoryFilter('all', '');
         });
         document.getElementById('cardStatIturan').addEventListener('click', () => applyIturanFilter());
@@ -287,12 +373,6 @@
         document.getElementById('cardStatReturned').addEventListener('click', () => applyCategoryFilter('returned', 'חזרו (סיום פעילות)'));
         document.getElementById('cardStatCancelled').addEventListener('click', () => applyCategoryFilter('cancelled', 'בוטלה התקנה'));
         document.getElementById('cardStatArchive').addEventListener('click', () => applyArchiveFilterFromStats());
-        
-        modelFilterSelect.addEventListener('change', (e) => {
-            currentModelFilter = e.target.value;
-            updateActiveFilterBadge();
-            renderSafes();
-        });
 
         clearFilterBtn.addEventListener('click', () => {
             currentCategoryFilter = 'all';
@@ -300,7 +380,6 @@
             currentModelFilter = 'all';
             onlyIturanFilter = false;
             showingArchive = false;
-            modelFilterSelect.value = 'all';
             viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
             viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
             listTitle.innerHTML = 'מלאי כספות נוכחי';
@@ -316,7 +395,7 @@
             const dataToExport = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
-                const matchesModel = (currentModelFilter === 'all') || (safe.data.safeType === currentModelFilter);
+                const matchesModel = checkModelMatch(safe.data.safeType, currentModelFilter);
                 const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
 
                 let matchesCategory = true;
@@ -480,12 +559,13 @@
 
         const renderSafes = () => {
             listContainer.innerHTML = '';
+            updateRubricCounts();
             const searchTerm = searchInput.value.trim().toLowerCase();
 
             const filteredSafes = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
                 const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
-                const matchesModel = (currentModelFilter === 'all') || (safe.data.safeType === currentModelFilter);
+                const matchesModel = checkModelMatch(safe.data.safeType, currentModelFilter);
                 const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
                 
                 let matchesCategory = true;
@@ -498,7 +578,7 @@
             });
 
             if (filteredSafes.length === 0) {
-                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה התואמות את הסינון או החיפוש הנוכחי.</div>`;
+                listContainer.innerHTML = `<div class="alert alert-secondary text-center mt-4">אין כספות להצגה ברובריקה או בסינון הנוכחי.</div>`;
                 return;
             }
 
@@ -536,8 +616,6 @@
                 const canHaveIturan = allowedIturanTypes.includes(data.safeType);
 
                 let togglesUI = '';
-                
-                // מאפשר עדכון מהיר גם במלאי הפעיל וגם בארכיון לצורך תיקון טעויות
                 let checkboxesHTML = '';
                 if (isSDM) {
                     checkboxesHTML += `
@@ -637,11 +715,10 @@
                 btn.addEventListener('click', (e) => {
                     currentDispatchId = e.currentTarget.getAttribute('data-id');
                     
-                    // בדיקת חסימה עבור דגמי SDM-100 או SDM-500 שאין להם מנעול נקישות
                     const safeObj = allSafesData.find(s => s.id === currentDispatchId);
                     if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
                         alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
-                        return; // עוצר לחלוטין ומונע פתיחת חלון הוצאה
+                        return;
                     }
 
                     dispatchCustomerNameInput.value = ''; 
@@ -763,7 +840,6 @@
         btnTakeOutgoingPhoto.addEventListener('click', () => {
             if(IMGBB_API_KEY === "הכנס_כאן_את_המפתח_שלך_מ_IMGBB") return alert("שגיאה: טרם הזנת את מפתח ה-API של ImgBB.");
             const safeObj = allSafesData.find(s => s.id === currentDispatchId);
-            const dispatchType = dispatchTypeSelect.value;
 
             if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
                 alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
@@ -1083,21 +1159,18 @@
                 <button id="viewArchiveBtn" class="btn btn-sm btn-outline-light fw-bold px-3">🗄️ יציאות והשמדות</button>
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <input type="text" id="searchInput" class="form-control bg-dark text-light border-primary fw-bold text-center fs-5 py-2" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
-            <div class="mb-3">
-                <select id="modelFilterSelect" class="form-select bg-dark text-light fw-bold text-center border-secondary fs-5 py-2">
-                    <option value="all">🗂️ כל הדגמים (ללא סינון דגם)</option>
-                    <option value="SDM-100">דגם: SDM-100</option>
-                    <option value="SDM-500">דגם: SDM-500</option>
-                    <option value="SUMMIT">דגם: SUMMIT</option>
-                    <option value="CD-SMALL (CDS)">דגם: CD-SMALL (CDS)</option>
-                    <option value="CD-5">דגם: CD-5</option>
-                    <option value="CD-7">דגם: CD-7</option>
-                    <option value="XL">דגם: XL</option>
-                </select>
+            <!-- סרגל רובריקות דגמים (הכל, SDM-100, SDM-500, SUMMIT, XL, CASHDRO) -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <button type="button" class="model-rubric-btn active" data-model="all" data-label="הכל">הכל</button>
+                <button type="button" class="model-rubric-btn" data-model="SDM-100" data-label="SDM-100">SDM-100</button>
+                <button type="button" class="model-rubric-btn" data-model="SDM-500" data-label="SDM-500">SDM-500</button>
+                <button type="button" class="model-rubric-btn" data-model="SUMMIT" data-label="SUMMIT">SUMMIT</button>
+                <button type="button" class="model-rubric-btn" data-model="XL" data-label="XL">XL</button>
+                <button type="button" class="model-rubric-btn" data-model="CASHDRO" data-label="CASHDRO">CASHDRO</button>
             </div>
 
             <div class="mb-3">
@@ -1108,143 +1181,3 @@
 
             <div id="activeFilterContainer" class="d-none mb-3">
                 <span class="badge bg-info text-dark fs-6 p-2 d-flex justify-content-between align-items-center shadow-sm">
-                    <span id="activeFilterText">מציג: הכל</span>
-                    <button type="button" class="btn-close btn-close-sm ms-3" aria-label="Close" id="clearFilterBtn" title="נקה את כל הסינונים"></button>
-                </span>
-            </div>
-
-            <div id="safesList"></div>
-        </div>
-
-        <!-- ============================== -->
-        <!-- תצוגה 3: דוח מנהלים (דשבורד בסגנון רכב) -->
-        <!-- ============================== -->
-        <div id="statsView" class="d-none">
-            
-            <div class="car-dashboard-card p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-bold text-light m-0">🏎️ לוח בקרה ראשי</h4>
-                    <span class="text-muted small">(לחץ על נתון לסינון)</span>
-                </div>
-                
-                <div class="row g-3 text-center">
-                    <div class="col-6">
-                        <div id="cardStatTotal" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card">
-                            <div class="small fw-bold text-muted mb-1">סה"כ פעיל בחדר</div>
-                            <div class="fs-1 fw-bolder text-light car-metric-value" id="statTotal">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div id="cardStatIturan" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-info">
-                            <div class="small fw-bold text-info mb-1">📡 סה"כ עם איתוראן</div>
-                            <div class="fs-1 fw-bolder text-info car-metric-value" id="statIturan">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div id="cardStatNew" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-success">
-                            <div class="small fw-bold text-success mb-1">⭐ חדשות מהניילון</div>
-                            <div class="fs-2 fw-bolder text-success car-metric-value" id="statNew">0</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div id="cardStatReturned" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-warning">
-                            <div class="small fw-bold text-warning mb-1">🔄 חזרו (סיום פעילות)</div>
-                            <div class="fs-2 fw-bolder text-warning car-metric-value" id="statReturned">0</div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div id="cardStatArchive" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-secondary">
-                            <div class="small fw-bold text-secondary mb-1">📦 יציאות והשמדות (ארכיון)</div>
-                            <div class="fs-2 fw-bolder text-light car-metric-value" id="statArchive">0</div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div id="cardStatCancelled" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-danger">
-                            <div class="small fw-bold text-danger mb-1">❌ בטלו התקנה</div>
-                            <div class="fs-2 fw-bolder text-danger car-metric-value" id="statCancelled">0</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="car-dashboard-card p-4 mb-4">
-                <h5 class="fw-bold text-light mb-3">📊 סטטוס מלאי והתקנות לפי דגם</h5>
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover table-bordered border-secondary align-middle text-center mb-0">
-                        <thead class="table-secondary text-dark">
-                            <tr>
-                                <th scope="col" class="text-start ps-3">סוג כספת</th>
-                                <th scope="col">סה"כ</th>
-                                <th scope="col">איתוראן 📡</th>
-                                <th scope="col">נקישות ✅</th>
-                            </tr>
-                        </thead>
-                        <tbody id="statsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="text-center mt-5 mb-3">
-            <small class="text-muted">© זכויות יוצרים איגור מלמן לטובת מרלוג</small>
-        </div>
-
-    </div>
-
-    <!-- מודאל חיתוך תמונה -->
-    <div id="cropModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
-        <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 500px;">
-            <div class="text-center">
-                <h5 class="fw-bolder mb-1 text-light">🎯 מקד על המספר הסידורי</h5>
-                <p class="text-muted small mb-3">הזז והקטן את המסגרת כך שתקיף רק את שורת המספר הסידורי.</p>
-                
-                <div class="crop-container mb-3">
-                    <img id="imageToCrop" src="" alt="תמונה לסריקה">
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button id="btnConfirmCrop" class="btn btn-success fw-bold flex-fill py-2">✅ סרוק מספר</button>
-                    <button id="btnCancelCrop" class="btn btn-outline-danger fw-bold py-2 px-3">ביטול</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- מודאל יציאה מהמלאי -->
-    <div id="dispatchModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
-        <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 400px;">
-            <div class="text-center">
-                <h4 class="fw-bolder mb-3 text-light">הוצאה מהמלאי</h4>
-                <p class="text-muted small mb-3">בחר את מטרת היציאה מהחדר.</p>
-                
-                <div class="mb-3 text-start">
-                    <label class="form-label small fw-bold">סוג יציאה מהחדר:</label>
-                    <select id="dispatchTypeSelect" class="form-select bg-dark text-light fw-bold border-secondary">
-                        <option value="customer">🚚 יציאה להתקנה אצל לקוח</option>
-                        <option value="destruction">🔥 שליחה להשמדה / גריטה</option>
-                    </select>
-                </div>
-
-                <div id="dispatchCustomerFields">
-                    <div class="mb-3 text-start">
-                        <label class="form-label small fw-bold">שם הלקוח (לאן הכספת יוצאת?)</label>
-                        <input type="text" id="dispatchCustomerName" class="form-control bg-dark text-light border-secondary" placeholder="הכנס שם לקוח">
-                    </div>
-                    <div class="mb-4 text-start">
-                        <label class="form-label small fw-bold">מספר כספת (אופציונלי)</label>
-                        <input type="text" id="dispatchSafeNumber" class="form-control bg-dark text-light border-secondary" placeholder="הכנס מספר כספת">
-                    </div>
-                </div>
-
-                <div class="d-flex flex-column gap-2 mt-4">
-                    <button id="btnTakeOutgoingPhoto" class="btn btn-primary fw-bold py-2">📸 צלם כספת והוצא</button>
-                    <button id="btnSkipPhoto" class="btn btn-secondary fw-bold py-2">הוצא ללא תמונה</button>
-                    <button id="btnCancelDispatch" class="btn btn-link text-danger fw-bold text-decoration-none mt-2">ביטול</button>
-                </div>
-                <input type="file" id="outgoingFileInput" accept="image/*" capture="environment" class="d-none">
-            </div>
-        </div>
-    </div>
-</body>
-</html>
