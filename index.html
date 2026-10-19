@@ -130,6 +130,16 @@
         .car-metric-value { font-family: monospace; letter-spacing: 1px; }
         .crop-container { max-height: 55vh; width: 100%; overflow: hidden; background: #000; border-radius: 12px; }
         .crop-container img { display: block; max-width: 100%; }
+        
+        /* עיצוב מספר הגרסה בצד שמאל למטה */
+        .version-badge {
+            font-size: 0.75rem;
+            opacity: 0.4;
+            user-select: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .version-badge:hover { opacity: 0.8; }
     </style>
 
     <script type="module">
@@ -739,7 +749,7 @@
                     
                     const safeObj = allSafesData.find(s => s.id === currentDispatchId);
                     if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
-                        alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
+                        alert("⚠️ שגיאה: אין להוצא כספת מדגם זה ללא מנעול נקישות");
                         return;
                     }
 
@@ -926,40 +936,39 @@
         });
 
         // ==========================================
-        // מנגנון סריקה משולב: OCR + סורק ברקודים חכם (Quagga2) עבור Cashdro
+        // מנגנון סריקה משולב: ברקוד Cashdro (Quagga2) ואח"כ OCR
         // ==========================================
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            serialInput.value = "בודק ברקוד / טוען...";
+            serialInput.value = "מזהה ברקוד / תמונה...";
 
             const objectUrl = URL.createObjectURL(file);
             const img = new Image();
 
             img.onload = () => {
-                // שלב 1: מנסים קודם כל לפענח ברקוד ישירות מהתמונה (ייעודי למדבקות Cashdro)
+                // שלב ראשון: בדיקת ברקוד ליניארי (עבור מדבקות Cashdro)
                 Quagga.decodeSingle({
                     decoder: {
                         readers: ["code_128_reader", "ean_reader", "code_39_reader"]
                     },
                     locate: true,
                     src: objectUrl
-                }, async (result) => {
+                }, (result) => {
                     if (result && result.codeResult && result.codeResult.code) {
-                        // אם נמצא ברקוד תקין - שולפים אותו מיד בלי צורך בחיתוך!
                         const barcodeText = result.codeResult.code.trim();
                         URL.revokeObjectURL(objectUrl);
                         fileInput.value = "";
                         
                         if (barcodeText.length >= 4) {
                             serialInput.value = barcodeText;
-                            alert(`✅ ברקוד Cashdro נסרי בהצלחה: ${barcodeText}`);
+                            alert(`✅ ברקוד Cashdro זוהה בהצלחה: ${barcodeText}`);
                             return;
                         }
                     }
 
-                    // אם לא נמצא ברקוד ליניארי, ממשיכים למסך החיתוך וה-OCR הרגיל
+                    // שלב שני: אם אין ברקוד, פותחים את מסך החיתוך וה-OCR הרגיל
                     const maxDim = 1200;
                     let w = img.width;
                     let h = img.height;
@@ -1100,6 +1109,22 @@
                 btnConfirmCrop.innerHTML = '✅ סרוק מספר';
             }
         });
+
+        // לחיצה ארוכה על מספר הגרסה לפתיחת פרטים
+        let versionPressTimer;
+        const versionBadge = document.getElementById('versionBadge');
+        versionBadge.addEventListener('mousedown', () => {
+            versionPressTimer = setTimeout(() => {
+                alert("ℹ️ מערכת ניהול כספות מרלוג\nגרסה: v2.6 (כולל תמיכה בברקוד Cashdro)\nמפתח: איגור מלמן");
+            }, 2000);
+        });
+        versionBadge.addEventListener('mouseup', () => clearTimeout(versionPressTimer));
+        versionBadge.addEventListener('touchstart', () => {
+            versionPressTimer = setTimeout(() => {
+                alert("ℹ️ מערכת ניהול כספות מרלוג\nגרסה: v2.6 (כולל תמיכה בברקוד Cashdro)\nמפתח: איגור מלמן");
+            }, 2000);
+        });
+        versionBadge.addEventListener('touchend', () => clearTimeout(versionPressTimer));
     </script>
 </head>
 <body>
@@ -1304,8 +1329,11 @@
 
         </div>
 
-        <div class="text-center mt-5 mb-3">
-            <small class="text-muted">© זכויות יוצרים איגור מלמן לטובת מרלוג</small>
+        <!-- רגל העמוד: זכויות יוצרים ומספר גרסה נסתר (לחיצה ארוכה בצד שמאל) -->
+        <div class="d-flex justify-content-between align-items-center mt-5 mb-3 px-2">
+            <span id="versionBadge" class="version-badge" title="גרסת מערכת">v2.6</span>
+            <small class="text-muted text-center flex-fill">© זכויות יוצרים איגור מלמן לטובת מרלוג</small>
+            <span style="width: 25px;"></span> <!-- איזון אופטי -->
         </div>
 
     </div>
