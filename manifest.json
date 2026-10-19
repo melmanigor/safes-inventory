@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "rtl",
+  "display": "standalone",
+  "name": "מלאי כספות חדר מרלוג",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Safes",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "lang": "he"
+}
