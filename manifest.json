@@ -1,12 +1,21 @@
 {
-  "background_color": "#ffffff",
-  "dir": "rtl",
-  "display": "standalone",
   "name": "מלאי כספות חדר מרלוג",
-  "orientation": "any",
-  "scope": "/safes-inventory/",
   "short_name": "Safes",
-  "start_url": "/",
-  "theme_color": "#ffffff",
-  "lang": "he"
+  "description": "מערכת ניהול מלאי כספות מרלוג",
+  "start_url": "/safes-inventory/",
+  "scope": "/safes-inventory/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2889/2889676.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }
