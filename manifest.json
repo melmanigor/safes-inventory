@@ -4,7 +4,7 @@
   "display": "standalone",
   "name": "מלאי כספות חדר מרלוג",
   "orientation": "any",
-  "scope": "/",
+  "scope": "/safes-inventory/",
   "short_name": "Safes",
   "start_url": "/",
   "theme_color": "#ffffff",
