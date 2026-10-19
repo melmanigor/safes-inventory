@@ -12,8 +12,6 @@
     
     <!-- Tesseract OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-    <!-- Quagga2 Barcode Reader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <!-- Cropper.js JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     
@@ -131,15 +129,12 @@
         .crop-container { max-height: 55vh; width: 100%; overflow: hidden; background: #000; border-radius: 12px; }
         .crop-container img { display: block; max-width: 100%; }
         
-        /* עיצוב מספר הגרסה בצד שמאל למטה */
         .version-badge {
             font-size: 0.75rem;
-            opacity: 0.4;
-            user-select: none;
+            opacity: 0;
             cursor: pointer;
-            transition: opacity 0.2s;
+            user-select: none;
         }
-        .version-badge:hover { opacity: 0.8; }
     </style>
 
     <script type="module">
@@ -749,7 +744,7 @@
                     
                     const safeObj = allSafesData.find(s => s.id === currentDispatchId);
                     if (safeObj && (safeObj.data.safeType === 'SDM-100' || safeObj.data.safeType === 'SDM-500') && !safeObj.data.hasKnockLock) {
-                        alert("⚠️ שגיאה: אין להוצא כספת מדגם זה ללא מנעול נקישות");
+                        alert("⚠️ שגיאה: אין להוציא כספת מדגם זה ללא מנעול נקישות");
                         return;
                     }
 
@@ -936,84 +931,62 @@
         });
 
         // ==========================================
-        // מנגנון סריקה משולב: ברקוד Cashdro (Quagga2) ואח"כ OCR
+        // מנגנון סריקה משולב חכם עבור Cashdro ומדבקות רגילות
         // ==========================================
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            serialInput.value = "מזהה ברקוד / תמונה...";
+            serialInput.value = "מזהה מספר / ברקוד...";
 
-            const objectUrl = URL.createObjectURL(file);
             const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
 
             img.onload = () => {
-                // שלב ראשון: בדיקת ברקוד ליניארי (עבור מדבקות Cashdro)
-                Quagga.decodeSingle({
-                    decoder: {
-                        readers: ["code_128_reader", "ean_reader", "code_39_reader"]
-                    },
-                    locate: true,
-                    src: objectUrl
-                }, (result) => {
-                    if (result && result.codeResult && result.codeResult.code) {
-                        const barcodeText = result.codeResult.code.trim();
-                        URL.revokeObjectURL(objectUrl);
-                        fileInput.value = "";
-                        
-                        if (barcodeText.length >= 4) {
-                            serialInput.value = barcodeText;
-                            alert(`✅ ברקוד Cashdro זוהה בהצלחה: ${barcodeText}`);
-                            return;
+                const maxDim = 1200;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                }
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(objectUrl);
+
+                imageToCrop.src = tempCanvas.toDataURL('image/jpeg', 0.85);
+                serialInput.value = "";
+                cropModal.classList.remove('d-none');
+
+                if (cropper) cropper.destroy();
+
+                setTimeout(() => {
+                    cropper = new Cropper(imageToCrop, {
+                        viewMode: 1,
+                        dragMode: 'move',
+                        autoCropArea: 0.5,
+                        restore: false,
+                        guides: true,
+                        center: true,
+                        highlight: false,
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        toggleDragModeOnDblclick: false,
+                        ready() {
+                            const containerData = cropper.getContainerData();
+                            const width = containerData.width * 0.75;
+                            const height = 60;
+                            cropper.setCropBoxData({
+                                left: (containerData.width - width) / 2,
+                                top: (containerData.height - height) / 2,
+                                width: width,
+                                height: height
+                            });
                         }
-                    }
-
-                    // שלב שני: אם אין ברקוד, פותחים את מסך החיתוך וה-OCR הרגיל
-                    const maxDim = 1200;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
-                    }
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = w;
-                    tempCanvas.height = h;
-                    tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    URL.revokeObjectURL(objectUrl);
-
-                    imageToCrop.src = tempCanvas.toDataURL('image/jpeg', 0.85);
-                    serialInput.value = "";
-                    cropModal.classList.remove('d-none');
-
-                    if (cropper) cropper.destroy();
-
-                    setTimeout(() => {
-                        cropper = new Cropper(imageToCrop, {
-                            viewMode: 1,
-                            dragMode: 'move',
-                            autoCropArea: 0.5,
-                            restore: false,
-                            guides: true,
-                            center: true,
-                            highlight: false,
-                            cropBoxMovable: true,
-                            cropBoxResizable: true,
-                            toggleDragModeOnDblclick: false,
-                            ready() {
-                                const containerData = cropper.getContainerData();
-                                const width = containerData.width * 0.75;
-                                const height = 60;
-                                cropper.setCropBoxData({
-                                    left: (containerData.width - width) / 2,
-                                    top: (containerData.height - height) / 2,
-                                    width: width,
-                                    height: height
-                                });
-                            }
-                        });
-                    }, 50);
-                });
+                    });
+                }, 50);
             };
 
             img.onerror = () => {
@@ -1053,6 +1026,7 @@
             return canvas;
         }
 
+        // כפתור אישור חיתוך OCR מותאם גם לקאשדרו (CD5ILS...)
         btnConfirmCrop.addEventListener('click', async () => {
             if (!cropper) return;
 
@@ -1073,6 +1047,7 @@
                 const worker = await Tesseract.createWorker();
                 await worker.loadLanguage('eng');
                 await worker.initialize('eng');
+                // פותחים את התווים כך שיזהו בוודאות את הקידומות של קאשדרו (כמו CD5ILS...)
                 await worker.setParameters({
                     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ./- ',
                     tessedit_pageseg_mode: '6'
@@ -1082,11 +1057,15 @@
                 await worker.terminate();
 
                 const upperText = text.toUpperCase();
-                const matches = upperText.match(/[A-Z]{1,3}\d{4,14}|\d{4,14}/g);
+                // מחפש תבנית של קאשדרו (כמו CD5ILS...) או מספר רגיל / SP / SU
+                const cashdroMatch = upperText.match(/CD[A-Z0-9]{4,20}/);
+                const standardMatch = upperText.match(/[A-Z]{1,3}\d{4,14}|\d{4,14}/g);
                 
                 let bestMatch = "";
-                if (matches && matches.length > 0) {
-                    bestMatch = matches.reduce((a, b) => a.length >= b.length ? a : b);
+                if (cashdroMatch) {
+                    bestMatch = cashdroMatch[0];
+                } else if (standardMatch && standardMatch.length > 0) {
+                    bestMatch = standardMatch.reduce((a, b) => a.length >= b.length ? a : b);
                 } else {
                     bestMatch = upperText.replace(/[^0-9A-Z]/g, '').trim();
                 }
@@ -1098,7 +1077,7 @@
                     cropper = null;
                 } else {
                     serialInput.value = "";
-                    alert("לא זוהה מספר ברור במסגרת. נסה למקם את המסגרת רק על המספר התחתון או להקליד ידנית.");
+                    alert("לא זוהה מספר ברור במסגרת. נסה למקם את המסגרת בדיוק על שורת הטקסט מתחת לברקוד או להקליד ידנית.");
                 }
             } catch (error) {
                 console.error(error);
@@ -1110,7 +1089,7 @@
             }
         });
 
-        // לחיצה ארוכה על מספר הגרסה לפתיחת פרטים
+        // לחיצה ארוכה על מספר הגרסה המוסתר
         let versionPressTimer;
         const versionBadge = document.getElementById('versionBadge');
         versionBadge.addEventListener('mousedown', () => {
@@ -1329,11 +1308,11 @@
 
         </div>
 
-        <!-- רגל העמוד: זכויות יוצרים ומספר גרסה נסתר (לחיצה ארוכה בצד שמאל) -->
+        <!-- רגל העמוד: זכויות יוצרים ומספר גרסה מוסתר לחלוטין (לחיצה ארוכה בצד שמאל) -->
         <div class="d-flex justify-content-between align-items-center mt-5 mb-3 px-2">
             <span id="versionBadge" class="version-badge" title="גרסת מערכת">v2.6</span>
             <small class="text-muted text-center flex-fill">© זכויות יוצרים איגור מלמן לטובת מרלוג</small>
-            <span style="width: 25px;"></span> <!-- איזון אופטי -->
+            <span style="width: 25px;"></span>
         </div>
 
     </div>
@@ -1343,7 +1322,7 @@
         <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 500px;">
             <div class="text-center">
                 <h5 class="fw-bolder mb-1">🎯 מקד על המספר הסידורי</h5>
-                <p class="text-muted small mb-3">הזז והקטן את המסגרת כך שתקיף רק את שורת המספר הסידורי.</p>
+                <p class="text-muted small mb-3">הזז והקטן את המסגרת כך שתקיף את שורת הטקסט מתחת לברקוד (למשל CD5ILS...).</p>
                 
                 <div class="crop-container mb-3">
                     <img id="imageToCrop" src="" alt="תמונה לסריקה">
