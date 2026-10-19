@@ -12,11 +12,12 @@
     
     <!-- Tesseract OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <!-- Quagga2 Barcode Reader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <!-- Cropper.js JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     
     <style>
-        /* משתני צבע דינמיים למצב לילה (ברירת מחדל) ומצב יום */
         :root, [data-bs-theme="dark"] {
             --car-bg: #0b0f19;
             --car-text: #e2e8f0;
@@ -58,7 +59,6 @@
         .cursor-pointer { cursor: pointer; }
         .glass-modal { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
         
-        /* עיצוב בסגנון לוח מחוונים דיגיטלי לרכב */
         .car-dashboard-card {
             background: var(--car-card-bg);
             border: 1px solid var(--car-card-border);
@@ -93,21 +93,17 @@
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.45);
         }
 
-        /* שדות קלט מותאמים למצב יום ולילה */
         .car-input {
             background-color: var(--car-input-bg) !important;
             color: var(--car-text) !important;
             border-color: var(--car-input-border) !important;
         }
-        .car-input::placeholder {
-            color: #64748b !important;
-        }
+        .car-input::placeholder { color: #64748b !important; }
         .car-inner-box {
             background-color: var(--car-inner-box);
             border-color: var(--car-input-border) !important;
         }
 
-        /* כפתורי רובריקות דגמים ברשימות */
         .model-rubric-btn {
             background: var(--car-rubric-bg);
             border: 1px solid rgba(59, 130, 246, 0.3);
@@ -131,11 +127,7 @@
             box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
         }
 
-        .car-metric-value {
-            font-family: monospace;
-            letter-spacing: 1px;
-        }
-
+        .car-metric-value { font-family: monospace; letter-spacing: 1px; }
         .crop-container { max-height: 55vh; width: 100%; overflow: hidden; background: #000; border-radius: 12px; }
         .crop-container img { display: block; max-width: 100%; }
     </style>
@@ -230,7 +222,6 @@
         const searchInput = document.getElementById('searchInput');
         const fileInput = document.getElementById('fileInput');
 
-        // משתני המודאל ליציאה
         const dispatchModal = document.getElementById('dispatchModal');
         const btnTakeOutgoingPhoto = document.getElementById('btnTakeOutgoingPhoto');
         const btnSkipPhoto = document.getElementById('btnSkipPhoto');
@@ -243,7 +234,6 @@
         const dispatchSafeNumberInput = document.getElementById('dispatchSafeNumber');
         let currentDispatchId = null;
 
-        // משתני מודאל חיתוך תמונה (Cropper)
         const cropModal = document.getElementById('cropModal');
         const imageToCrop = document.getElementById('imageToCrop');
         const btnConfirmCrop = document.getElementById('btnConfirmCrop');
@@ -256,7 +246,6 @@
         let showingArchive = false;
         let allSafesData = [];
 
-        // --- לוגיקת סינון לפי רובריקות ודגמים ---
         let currentCategoryFilter = 'all';
         let currentCategoryName = '';
         let currentModelFilter = 'all';
@@ -433,9 +422,7 @@
             updateActiveFilterBadge();
             renderSafes();
         });
-        // ---------------------------------
 
-        // --- ייצוא לאקסל ---
         exportExcelBtn.addEventListener('click', () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
 
@@ -939,62 +926,85 @@
         });
 
         // ==========================================
-        // מנגנון סריקה חכם
+        // מנגנון סריקה משולב: OCR + סורק ברקודים חכם (Quagga2) עבור Cashdro
         // ==========================================
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            serialInput.value = "טוען תמונה...";
+            serialInput.value = "בודק ברקוד / טוען...";
 
-            const img = new Image();
             const objectUrl = URL.createObjectURL(file);
-            
+            const img = new Image();
+
             img.onload = () => {
-                const maxDim = 1200;
-                let w = img.width;
-                let h = img.height;
-                if (w > maxDim || h > maxDim) {
-                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
-                }
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = w;
-                tempCanvas.height = h;
-                tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                URL.revokeObjectURL(objectUrl);
-
-                imageToCrop.src = tempCanvas.toDataURL('image/jpeg', 0.85);
-                serialInput.value = "";
-                cropModal.classList.remove('d-none');
-
-                if (cropper) cropper.destroy();
-
-                setTimeout(() => {
-                    cropper = new Cropper(imageToCrop, {
-                        viewMode: 1,
-                        dragMode: 'move',
-                        autoCropArea: 0.5,
-                        restore: false,
-                        guides: true,
-                        center: true,
-                        highlight: false,
-                        cropBoxMovable: true,
-                        cropBoxResizable: true,
-                        toggleDragModeOnDblclick: false,
-                        ready() {
-                            const containerData = cropper.getContainerData();
-                            const width = containerData.width * 0.75;
-                            const height = 60;
-                            cropper.setCropBoxData({
-                                left: (containerData.width - width) / 2,
-                                top: (containerData.height - height) / 2,
-                                width: width,
-                                height: height
-                            });
+                // שלב 1: מנסים קודם כל לפענח ברקוד ישירות מהתמונה (ייעודי למדבקות Cashdro)
+                Quagga.decodeSingle({
+                    decoder: {
+                        readers: ["code_128_reader", "ean_reader", "code_39_reader"]
+                    },
+                    locate: true,
+                    src: objectUrl
+                }, async (result) => {
+                    if (result && result.codeResult && result.codeResult.code) {
+                        // אם נמצא ברקוד תקין - שולפים אותו מיד בלי צורך בחיתוך!
+                        const barcodeText = result.codeResult.code.trim();
+                        URL.revokeObjectURL(objectUrl);
+                        fileInput.value = "";
+                        
+                        if (barcodeText.length >= 4) {
+                            serialInput.value = barcodeText;
+                            alert(`✅ ברקוד Cashdro נסרי בהצלחה: ${barcodeText}`);
+                            return;
                         }
-                    });
-                }, 50);
+                    }
+
+                    // אם לא נמצא ברקוד ליניארי, ממשיכים למסך החיתוך וה-OCR הרגיל
+                    const maxDim = 1200;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    tempCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    URL.revokeObjectURL(objectUrl);
+
+                    imageToCrop.src = tempCanvas.toDataURL('image/jpeg', 0.85);
+                    serialInput.value = "";
+                    cropModal.classList.remove('d-none');
+
+                    if (cropper) cropper.destroy();
+
+                    setTimeout(() => {
+                        cropper = new Cropper(imageToCrop, {
+                            viewMode: 1,
+                            dragMode: 'move',
+                            autoCropArea: 0.5,
+                            restore: false,
+                            guides: true,
+                            center: true,
+                            highlight: false,
+                            cropBoxMovable: true,
+                            cropBoxResizable: true,
+                            toggleDragModeOnDblclick: false,
+                            ready() {
+                                const containerData = cropper.getContainerData();
+                                const width = containerData.width * 0.75;
+                                const height = 60;
+                                cropper.setCropBoxData({
+                                    left: (containerData.width - width) / 2,
+                                    top: (containerData.height - height) / 2,
+                                    width: width,
+                                    height: height
+                                });
+                            }
+                        });
+                    }, 50);
+                });
             };
 
             img.onerror = () => {
@@ -1104,7 +1114,7 @@
 
         <h1 class="text-center mb-4 fw-bolder" style="letter-spacing: 1px;">ניהול מלאי כספות</h1>
 
-        <!-- תפריט הניווט (Tabs) בסגנון רכב -->
+        <!-- תפריט הניווט (Tabs) מסודר מימין לשמאל: קליטה, רשימות, דוחות -->
         <div class="d-flex mb-4 pb-3 border-bottom border-secondary-subtle">
             <button id="tabAddSafe" class="btn car-nav-btn active flex-fill mx-1 fs-5">➕ קליטה</button>
             <button id="tabInventory" class="btn car-nav-btn flex-fill mx-1 opacity-75 fs-5">📦 רשימות</button>
@@ -1124,8 +1134,8 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">מספר סידורי (מק"ט)</label>
                         <div class="input-group">
-                            <label for="fileInput" class="btn btn-primary mb-0 d-flex align-items-center justify-content-center cursor-pointer px-4 fs-4" title="צלם מספר סידורי">📸</label>
-                            <input type="text" id="serialNumber" class="form-control fw-bold car-input" placeholder="הקלד או צלם למיקוד...">
+                            <label for="fileInput" class="btn btn-primary mb-0 d-flex align-items-center justify-content-center cursor-pointer px-4 fs-4" title="צלם מספר סידורי או ברקוד Cashdro">📸</label>
+                            <input type="text" id="serialNumber" class="form-control fw-bold car-input" placeholder="הקלד או סרוק ברקוד/מספר...">
                         </div>
                         <input type="file" id="fileInput" accept="image/*" capture="environment" class="visually-hidden">
                     </div>
