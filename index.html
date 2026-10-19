@@ -60,7 +60,7 @@
             color: #94a3b8;
             border-radius: 10px;
             font-weight: 700;
-            padding: 8px 12px;
+            padding: 8px 10px;
             font-size: 0.9rem;
             transition: all 0.2s;
             flex: 1 1 auto;
@@ -212,14 +212,25 @@
         const activeFilterText = document.getElementById('activeFilterText');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
 
-        // פונקציית עזר לבדיקת התאמת דגם (כולל קבוצת CASHDRO)
+        function setArchiveButtonState(isArchive) {
+            showingArchive = isArchive;
+            if (showingArchive) {
+                viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
+                viewArchiveBtn.className = 'btn btn-sm btn-info text-dark fw-bold px-3';
+                listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
+            } else {
+                viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
+                viewArchiveBtn.className = 'btn btn-sm btn-outline-light fw-bold px-3';
+                listTitle.innerHTML = onlyIturanFilter ? 'מלאי כספות נוכחי (עם איתוראן)' : 'מלאי כספות נוכחי';
+            }
+        }
+
         function checkModelMatch(safeType, filterVal) {
             if (filterVal === 'all') return true;
             if (filterVal === 'CASHDRO') return cashdroTypes.includes(safeType);
             return safeType === filterVal;
         }
 
-        // הדגשת הכפתור הפעיל בשורת הרובריקות
         function highlightModelRubricButtons() {
             document.querySelectorAll('.model-rubric-btn').forEach(btn => {
                 const btnModel = btn.getAttribute('data-model');
@@ -231,7 +242,6 @@
             });
         }
 
-        // עדכון המונים על כפתורי הרובריקות לפי התצוגה הנוכחית
         function updateRubricCounts() {
             const baseList = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
@@ -263,7 +273,7 @@
                 const m = btn.getAttribute('data-model');
                 const label = btn.getAttribute('data-label');
                 if (counts[m] !== undefined) {
-                    btn.innerHTML = `${label} <span class=" opacity-75">(${counts[m]})</span>`;
+                    btn.innerHTML = `${label} <span class="opacity-75">(${counts[m]})</span>`;
                 }
             });
         }
@@ -277,10 +287,10 @@
                 parts.push(`רובריקה: ${currentModelFilter}`);
             }
             if (onlyIturanFilter) {
-                parts.push('מציג: עם איתוראן בלבד');
+                parts.push('עם איתוראן בלבד');
             }
             if (showingArchive) {
-                parts.push('מציג: היסטוריית יציאות והשמדות');
+                parts.push('ארכיון יציאות והשמדות');
             }
 
             if (parts.length > 0) {
@@ -292,7 +302,6 @@
             highlightModelRubricButtons();
         }
 
-        // חיבור כפתורי הרובריקות ברשימות
         document.querySelectorAll('.model-rubric-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 currentModelFilter = btn.getAttribute('data-model');
@@ -305,10 +314,7 @@
             currentCategoryFilter = filterType;
             currentCategoryName = filterName;
             onlyIturanFilter = false;
-            showingArchive = false; 
-            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
-            listTitle.innerHTML = 'מלאי כספות נוכחי';
+            setArchiveButtonState(false);
             
             searchInput.value = ''; 
             updateActiveFilterBadge();
@@ -321,10 +327,7 @@
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             currentModelFilter = 'all';
-            showingArchive = false;
-            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
-            listTitle.innerHTML = 'מלאי כספות נוכחי (עם איתוראן)';
+            setArchiveButtonState(false);
 
             searchInput.value = '';
             updateActiveFilterBadge();
@@ -333,14 +336,11 @@
         }
 
         function applyArchiveFilterFromStats() {
-            showingArchive = true;
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             currentModelFilter = 'all';
             onlyIturanFilter = false;
-            viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
-            viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
-            listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
+            setArchiveButtonState(true);
 
             searchInput.value = '';
             updateActiveFilterBadge();
@@ -353,10 +353,7 @@
             currentCategoryFilter = 'all';
             currentCategoryName = '';
             onlyIturanFilter = false;
-            showingArchive = false;
-            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
-            listTitle.innerHTML = 'מלאי כספות נוכחי';
+            setArchiveButtonState(false);
 
             searchInput.value = '';
             updateActiveFilterBadge();
@@ -379,10 +376,7 @@
             currentCategoryName = '';
             currentModelFilter = 'all';
             onlyIturanFilter = false;
-            showingArchive = false;
-            viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-            viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
-            listTitle.innerHTML = 'מלאי כספות נוכחי';
+            setArchiveButtonState(false);
             updateActiveFilterBadge();
             renderSafes();
         });
@@ -394,7 +388,7 @@
 
             const dataToExport = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
-                const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
+                const matchesSearch = (safe.data.serialNumber || '').toLowerCase().includes(searchTerm);
                 const matchesModel = checkModelMatch(safe.data.safeType, currentModelFilter);
                 const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
 
@@ -455,21 +449,11 @@
         });
 
         viewArchiveBtn.addEventListener('click', () => {
-            showingArchive = !showingArchive;
             currentCategoryFilter = 'all'; 
             currentCategoryName = '';
             onlyIturanFilter = false;
+            setArchiveButtonState(!showingArchive);
             updateActiveFilterBadge();
-
-            if (showingArchive) {
-                viewArchiveBtn.innerHTML = '🔙 חזור לפעיל';
-                viewArchiveBtn.classList.replace('btn-secondary', 'btn-outline-primary');
-                listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
-            } else {
-                viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-                viewArchiveBtn.classList.replace('btn-outline-primary', 'btn-secondary');
-                listTitle.innerHTML = 'מלאי כספות נוכחי';
-            }
             renderSafes();
         });
 
@@ -514,7 +498,7 @@
             if (!serialNumber || !safeType || !originStatus) return alert('נא למלא את כל שדות החובה.');
 
             const isDuplicate = allSafesData.some(safe => 
-                safe.data.serialNumber.toLowerCase() === serialNumber.toLowerCase() && safe.data.isArchived === false
+                (safe.data.serialNumber || '').toLowerCase() === serialNumber.toLowerCase() && safe.data.isArchived === false
             );
 
             if (isDuplicate) {
@@ -564,7 +548,7 @@
 
             const filteredSafes = allSafesData.filter(safe => {
                 const matchesArchive = showingArchive ? safe.data.isArchived : !safe.data.isArchived;
-                const matchesSearch = safe.data.serialNumber.toLowerCase().includes(searchTerm);
+                const matchesSearch = (safe.data.serialNumber || '').toLowerCase().includes(searchTerm);
                 const matchesModel = checkModelMatch(safe.data.safeType, currentModelFilter);
                 const matchesIturan = !onlyIturanFilter || safe.data.hasIturan;
                 
@@ -662,37 +646,35 @@
                     : `<button class="btn btn-outline-danger btn-sm rounded-circle delete-btn" data-id="${id}" title="הוצא מהחדר">📤</button>`;
 
                 const div = document.createElement('div');
-                div.className = "card mb-3 shadow-sm border-secondary-subtle";
+                div.className = "car-dashboard-card mb-3 p-3";
                 div.innerHTML = `
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="w-100 pe-2">
-                                <h5 class="card-title fw-bold mb-1">${data.serialNumber}</h5>
-                                <h6 class="card-subtitle text-primary mb-2">סוג: ${data.safeType || 'לא צוין'}</h6>
-                                
-                                <div class="${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'd-none' : 'bg-body-tertiary p-2 rounded mb-2 border'}">
-                                    ${customerDisplay}
-                                    ${safeNumberDisplay}
-                                    ${notesDisplay}
-                                    <div>
-                                        ${incomingPhotoLink}
-                                        ${outgoingPhotoLink}
-                                    </div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="w-100 pe-2">
+                            <h5 class="fw-bold mb-1 text-light">${data.serialNumber}</h5>
+                            <h6 class="text-info mb-2">סוג: ${data.safeType || 'לא צוין'}</h6>
+                            
+                            <div class="${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'd-none' : 'bg-dark p-2 rounded mb-2 border border-secondary'}">
+                                ${customerDisplay}
+                                ${safeNumberDisplay}
+                                ${notesDisplay}
+                                <div>
+                                    ${incomingPhotoLink}
+                                    ${outgoingPhotoLink}
                                 </div>
-                                
-                                <div class="mb-2">
-                                    ${statusBadge}
-                                    ${data.isArchived ? '<span class="badge bg-secondary">ארכיון</span>' : ''}
-                                </div>
-                                
-                                ${togglesUI}
-                                ${dispatchDetails}
                             </div>
-                            ${actionButton}
+                            
+                            <div class="mb-2">
+                                ${statusBadge}
+                                ${data.isArchived ? '<span class="badge bg-secondary">ארכיון</span>' : ''}
+                            </div>
+                            
+                            ${togglesUI}
+                            ${dispatchDetails}
                         </div>
+                        ${actionButton}
                     </div>
-                    <div class="card-footer bg-transparent border-top-0 pt-0 text-muted small">
-                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
+                    <div class="mt-2 pt-2 border-top border-secondary text-muted small">
+                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold text-light">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
                     </div>
                 `;
                 listContainer.appendChild(div);
@@ -904,7 +886,7 @@
         });
 
         // ==========================================
-        // מנגנון סריקה חכם: מונע חיבור של 0.100 ובוחר את המספר הארוך והמדויק ביותר
+        // מנגנון סריקה חכם
         // ==========================================
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -1163,7 +1145,7 @@
                 <input type="text" id="searchInput" class="form-control bg-dark text-light border-primary fw-bold text-center fs-5 py-2" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
-            <!-- סרגל רובריקות דגמים (הכל, SDM-100, SDM-500, SUMMIT, XL, CASHDRO) -->
+            <!-- סרגל רובריקות דגמים -->
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <button type="button" class="model-rubric-btn active" data-model="all" data-label="הכל">הכל</button>
                 <button type="button" class="model-rubric-btn" data-model="SDM-100" data-label="SDM-100">SDM-100</button>
@@ -1179,5 +1161,146 @@
                 </button>
             </div>
 
+            <!-- תגית הסינון הפעיל (תוקנה התנגשות d-none מול d-flex) -->
             <div id="activeFilterContainer" class="d-none mb-3">
-                <span class="badge bg-info text-dark fs-6 p-2 d-flex justify-content-between align-items-center shadow-sm">
+                <div class="badge bg-info text-dark fs-6 p-2 d-flex justify-content-between align-items-center shadow-sm w-100">
+                    <span id="activeFilterText">מציג: הכל</span>
+                    <button type="button" class="btn-close btn-close-sm ms-2" aria-label="Close" id="clearFilterBtn" title="נקה את כל הסינונים"></button>
+                </div>
+            </div>
+
+            <div id="safesList"></div>
+        </div>
+
+        <!-- ============================== -->
+        <!-- תצוגה 3: דוח מנהלים (דשבורד בסגנון רכב) -->
+        <!-- ============================== -->
+        <div id="statsView" class="d-none">
+            
+            <div class="car-dashboard-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-light m-0">🏎️ לוח בקרה ראשי</h4>
+                    <span class="text-muted small">(לחץ על נתון לסינון)</span>
+                </div>
+                
+                <div class="row g-3 text-center">
+                    <div class="col-6">
+                        <div id="cardStatTotal" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card">
+                            <div class="small fw-bold text-muted mb-1">סה"כ פעיל בחדר</div>
+                            <div class="fs-1 fw-bolder text-light car-metric-value" id="statTotal">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div id="cardStatIturan" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-info">
+                            <div class="small fw-bold text-info mb-1">📡 סה"כ עם איתוראן</div>
+                            <div class="fs-1 fw-bolder text-info car-metric-value" id="statIturan">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div id="cardStatNew" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-success">
+                            <div class="small fw-bold text-success mb-1">⭐ חדשות מהניילון</div>
+                            <div class="fs-2 fw-bolder text-success car-metric-value" id="statNew">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div id="cardStatReturned" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-warning">
+                            <div class="small fw-bold text-warning mb-1">🔄 חזרו (סיום פעילות)</div>
+                            <div class="fs-2 fw-bolder text-warning car-metric-value" id="statReturned">0</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div id="cardStatArchive" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-secondary">
+                            <div class="small fw-bold text-secondary mb-1">📦 יציאות והשמדות (ארכיון)</div>
+                            <div class="fs-2 fw-bolder text-light car-metric-value" id="statArchive">0</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div id="cardStatCancelled" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-danger">
+                            <div class="small fw-bold text-danger mb-1">❌ בטלו התקנה</div>
+                            <div class="fs-2 fw-bolder text-danger car-metric-value" id="statCancelled">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="car-dashboard-card p-4 mb-4">
+                <h5 class="fw-bold text-light mb-3">📊 סטטוס מלאי והתקנות לפי דגם</h5>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-bordered border-secondary align-middle text-center mb-0">
+                        <thead class="table-secondary text-dark">
+                            <tr>
+                                <th scope="col" class="text-start ps-3">סוג כספת</th>
+                                <th scope="col">סה"כ</th>
+                                <th scope="col">איתוראן 📡</th>
+                                <th scope="col">נקישות ✅</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="text-center mt-5 mb-3">
+            <small class="text-muted">© זכויות יוצרים איגור מלמן לטובת מרלוג</small>
+        </div>
+
+    </div>
+
+    <!-- מודאל חיתוך תמונה -->
+    <div id="cropModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
+        <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 500px;">
+            <div class="text-center">
+                <h5 class="fw-bolder mb-1 text-light">🎯 מקד על המספר הסידורי</h5>
+                <p class="text-muted small mb-3">הזז והקטן את המסגרת כך שתקיף רק את שורת המספר הסידורי.</p>
+                
+                <div class="crop-container mb-3">
+                    <img id="imageToCrop" src="" alt="תמונה לסריקה">
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button id="btnConfirmCrop" class="btn btn-success fw-bold flex-fill py-2">✅ סרוק מספר</button>
+                    <button id="btnCancelCrop" class="btn btn-outline-danger fw-bold py-2 px-3">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- מודאל יציאה מהמלאי -->
+    <div id="dispatchModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
+        <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 400px;">
+            <div class="text-center">
+                <h4 class="fw-bolder mb-3 text-light">הוצאה מהמלאי</h4>
+                <p class="text-muted small mb-3">בחר את מטרת היציאה מהחדר.</p>
+                
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">סוג יציאה מהחדר:</label>
+                    <select id="dispatchTypeSelect" class="form-select bg-dark text-light fw-bold border-secondary">
+                        <option value="customer">🚚 יציאה להתקנה אצל לקוח</option>
+                        <option value="destruction">🔥 שליחה להשמדה / גריטה</option>
+                    </select>
+                </div>
+
+                <div id="dispatchCustomerFields">
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-bold">שם הלקוח (לאן הכספת יוצאת?)</label>
+                        <input type="text" id="dispatchCustomerName" class="form-control bg-dark text-light border-secondary" placeholder="הכנס שם לקוח">
+                    </div>
+                    <div class="mb-4 text-start">
+                        <label class="form-label small fw-bold">מספר כספת (אופציונלי)</label>
+                        <input type="text" id="dispatchSafeNumber" class="form-control bg-dark text-light border-secondary" placeholder="הכנס מספר כספת">
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-2 mt-4">
+                    <button id="btnTakeOutgoingPhoto" class="btn btn-primary fw-bold py-2">📸 צלם כספת והוצא</button>
+                    <button id="btnSkipPhoto" class="btn btn-secondary fw-bold py-2">הוצא ללא תמונה</button>
+                    <button id="btnCancelDispatch" class="btn btn-link text-danger fw-bold text-decoration-none mt-2">ביטול</button>
+                </div>
+                <input type="file" id="outgoingFileInput" accept="image/*" capture="environment" class="d-none">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
