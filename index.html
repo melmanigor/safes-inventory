@@ -16,48 +16,102 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     
     <style>
+        /* משתני צבע דינמיים למצב לילה (ברירת מחדל) ומצב יום */
+        :root, [data-bs-theme="dark"] {
+            --car-bg: #0b0f19;
+            --car-text: #e2e8f0;
+            --car-card-bg: linear-gradient(135deg, #131c31 0%, #0f172a 100%);
+            --car-card-border: rgba(59, 130, 246, 0.2);
+            --car-card-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            --car-nav-bg: #111827;
+            --car-nav-border: #374151;
+            --car-nav-text: rgba(255, 255, 255, 0.65);
+            --car-rubric-bg: #131c31;
+            --car-rubric-text: #94a3b8;
+            --car-input-bg: #111827;
+            --car-input-border: #374151;
+            --car-inner-box: #0b0f19;
+        }
+
+        [data-bs-theme="light"] {
+            --car-bg: #f1f5f9;
+            --car-text: #0f172a;
+            --car-card-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --car-card-border: rgba(37, 99, 235, 0.25);
+            --car-card-shadow: 0 6px 20px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            --car-nav-bg: #ffffff;
+            --car-nav-border: #cbd5e1;
+            --car-nav-text: #475569;
+            --car-rubric-bg: #ffffff;
+            --car-rubric-text: #475569;
+            --car-input-bg: #ffffff;
+            --car-input-border: #cbd5e1;
+            --car-inner-box: #f8fafc;
+        }
+
         body { 
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            background-color: #0b0f19;
-            color: #e2e8f0;
+            background-color: var(--car-bg);
+            color: var(--car-text);
+            transition: background-color 0.25s, color 0.25s;
         }
         .cursor-pointer { cursor: pointer; }
-        .glass-modal { background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        .glass-modal { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
         
         /* עיצוב בסגנון לוח מחוונים דיגיטלי לרכב */
         .car-dashboard-card {
-            background: linear-gradient(135deg, #131c31 0%, #0f172a 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            background: var(--car-card-bg);
+            border: 1px solid var(--car-card-border);
             border-radius: 16px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            box-shadow: var(--car-card-shadow);
             transition: all 0.25s ease-in-out;
         }
         .car-dashboard-card:hover {
             transform: translateY(-3px);
             border-color: rgba(59, 130, 246, 0.5);
-            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.15);
         }
         
         .car-nav-btn {
-            background: #111827;
-            border: 1px solid #374151;
+            background: var(--car-nav-bg);
+            border: 1px solid var(--car-nav-border);
+            color: var(--car-nav-text);
             border-radius: 12px;
             font-weight: 700;
             padding: 12px;
             transition: all 0.2s;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .car-nav-btn:hover {
+            color: var(--car-text);
+            border-color: #60a5fa;
         }
         .car-nav-btn.active {
             background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             border-color: #60a5fa;
-            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+            color: #ffffff !important;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.45);
+        }
+
+        /* שדות קלט מותאמים למצב יום ולילה */
+        .car-input {
+            background-color: var(--car-input-bg) !important;
+            color: var(--car-text) !important;
+            border-color: var(--car-input-border) !important;
+        }
+        .car-input::placeholder {
+            color: #64748b !important;
+        }
+        .car-inner-box {
+            background-color: var(--car-inner-box);
+            border-color: var(--car-input-border) !important;
         }
 
         /* כפתורי רובריקות דגמים ברשימות */
         .model-rubric-btn {
-            background: #131c31;
+            background: var(--car-rubric-bg);
             border: 1px solid rgba(59, 130, 246, 0.3);
-            color: #94a3b8;
+            color: var(--car-rubric-text);
             border-radius: 10px;
             font-weight: 700;
             padding: 8px 10px;
@@ -67,20 +121,19 @@
             text-align: center;
         }
         .model-rubric-btn:hover {
-            border-color: #60a5fa;
-            color: #fff;
+            border-color: #3b82f6;
+            color: var(--car-text);
         }
         .model-rubric-btn.active {
             background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             border-color: #38bdf8;
-            color: #ffffff;
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+            color: #ffffff !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
         }
 
         .car-metric-value {
             font-family: monospace;
             letter-spacing: 1px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.1);
         }
 
         .crop-container { max-height: 55vh; width: 100%; overflow: hidden; background: #000; border-radius: 12px; }
@@ -143,9 +196,9 @@
             tabs.forEach(id => {
                 const btn = document.getElementById(id);
                 if (id === activeTabId) {
-                    btn.className = "btn car-nav-btn active flex-fill mx-1 text-white fs-5";
+                    btn.className = "btn car-nav-btn active flex-fill mx-1 fs-5";
                 } else {
-                    btn.className = "btn car-nav-btn flex-fill mx-1 text-white-50 opacity-75 fs-5";
+                    btn.className = "btn car-nav-btn flex-fill mx-1 opacity-75 fs-5";
                 }
             });
             views.forEach(id => {
@@ -220,7 +273,7 @@
                 listTitle.innerHTML = '📦 היסטוריית יציאות והשמדות';
             } else {
                 viewArchiveBtn.innerHTML = '🗄️ יציאות והשמדות';
-                viewArchiveBtn.className = 'btn btn-sm btn-outline-light fw-bold px-3';
+                viewArchiveBtn.className = 'btn btn-sm btn-outline-secondary fw-bold px-3';
                 listTitle.innerHTML = onlyIturanFilter ? 'מלאי כספות נוכחי (עם איתוראן)' : 'מלאי כספות נוכחי';
             }
         }
@@ -603,7 +656,7 @@
                 let checkboxesHTML = '';
                 if (isSDM) {
                     checkboxesHTML += `
-                        <div class="form-check form-switch bg-body-tertiary p-2 rounded border mb-2 d-flex align-items-center">
+                        <div class="form-check form-switch car-inner-box p-2 rounded border mb-2 d-flex align-items-center">
                             <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasKnockLock" ${data.hasKnockLock ? 'checked' : ''}>
                             <label class="form-check-label small fw-bold cursor-pointer ${data.hasKnockLock ? 'text-primary' : 'text-body-secondary'}">
                                 ${data.hasKnockLock ? '✅ מנעול נקישות הותקן' : '⏳ מנעול נקישות (חובה)'}
@@ -613,7 +666,7 @@
                 }
                 if (canHaveIturan) {
                     checkboxesHTML += `
-                        <div class="form-check form-switch bg-body-tertiary p-2 rounded border d-flex align-items-center">
+                        <div class="form-check form-switch car-inner-box p-2 rounded border d-flex align-items-center">
                             <input class="form-check-input ms-2 mt-0 fast-update-cb cursor-pointer" type="checkbox" role="switch" data-id="${id}" data-field="hasIturan" ${data.hasIturan ? 'checked' : ''}>
                             <label class="form-check-label small fw-bold cursor-pointer ${data.hasIturan ? 'text-primary' : 'text-body-secondary'}">
                                 ${data.hasIturan ? '✅ איתוראן הותקן' : 'איתוראן (אופציונלי)'}
@@ -650,10 +703,10 @@
                 div.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="w-100 pe-2">
-                            <h5 class="fw-bold mb-1 text-light">${data.serialNumber}</h5>
-                            <h6 class="text-info mb-2">סוג: ${data.safeType || 'לא צוין'}</h6>
+                            <h5 class="fw-bold mb-1">${data.serialNumber}</h5>
+                            <h6 class="text-primary mb-2">סוג: ${data.safeType || 'לא צוין'}</h6>
                             
-                            <div class="${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'd-none' : 'bg-dark p-2 rounded mb-2 border border-secondary'}">
+                            <div class="${!(data.customerName || data.safeNumber || incomingPhotoLink || outgoingPhotoLink || data.safeConditionNotes) ? 'd-none' : 'car-inner-box p-2 rounded mb-2 border'}">
                                 ${customerDisplay}
                                 ${safeNumberDisplay}
                                 ${notesDisplay}
@@ -673,8 +726,8 @@
                         </div>
                         ${actionButton}
                     </div>
-                    <div class="mt-2 pt-2 border-top border-secondary text-muted small">
-                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold text-light">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
+                    <div class="mt-2 pt-2 border-top border-secondary-subtle text-muted small">
+                        🕒 ${data.isArchived ? daysInRoomText : `בחדר: <span class="fw-bold">${daysInRoomText}</span>${dateString ? `(${dateString})` : ''}`}
                     </div>
                 `;
                 listContainer.appendChild(div);
@@ -771,8 +824,8 @@
                 tr.className = "cursor-pointer model-row";
                 tr.title = `לחץ לצפייה בכל כספות ${type}`;
                 tr.innerHTML = `
-                    <td class="fw-bold text-start ps-3 bg-body-tertiary">${type} 🔍</td>
-                    <td class="fw-bolder fs-5 text-primary bg-body-tertiary">${s.total > 0 ? s.total : '<span class="text-muted opacity-50 fw-normal">0</span>'}</td>
+                    <td class="fw-bold text-start ps-3">${type} 🔍</td>
+                    <td class="fw-bolder fs-5 text-primary">${s.total > 0 ? s.total : '<span class="text-muted opacity-50 fw-normal">0</span>'}</td>
                     <td>${ituranYesUI}</td>
                     <td>${knockYesUI}</td>
                 `;
@@ -1042,20 +1095,20 @@
 <body>
     <div class="container py-4" style="max-width: 680px;">
         
-        <!-- כפתור מצב לילה עליון -->
+        <!-- כפתור מצב יום / לילה עליון -->
         <div class="d-flex justify-content-end mb-3">
             <button id="themeToggleBtn" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3">
                 ☀️ מצב יום
             </button>
         </div>
 
-        <h1 class="text-center mb-4 fw-bolder text-light" style="letter-spacing: 1px;">ניהול מלאי כספות</h1>
+        <h1 class="text-center mb-4 fw-bolder" style="letter-spacing: 1px;">ניהול מלאי כספות</h1>
 
         <!-- תפריט הניווט (Tabs) בסגנון רכב -->
-        <div class="d-flex mb-4 pb-3 border-bottom border-secondary">
-            <button id="tabAddSafe" class="btn car-nav-btn active flex-fill mx-1 text-white fs-5">➕ קליטה</button>
-            <button id="tabInventory" class="btn car-nav-btn flex-fill mx-1 text-white-50 opacity-75 fs-5">📦 רשימות</button>
-            <button id="tabStats" class="btn car-nav-btn flex-fill mx-1 text-white-50 opacity-75 fs-5">📊 דוחות</button>
+        <div class="d-flex mb-4 pb-3 border-bottom border-secondary-subtle">
+            <button id="tabAddSafe" class="btn car-nav-btn active flex-fill mx-1 fs-5">➕ קליטה</button>
+            <button id="tabInventory" class="btn car-nav-btn flex-fill mx-1 opacity-75 fs-5">📦 רשימות</button>
+            <button id="tabStats" class="btn car-nav-btn flex-fill mx-1 opacity-75 fs-5">📊 דוחות</button>
         </div>
 
         <!-- ============================== -->
@@ -1064,22 +1117,22 @@
         <div id="addSafeView">
             <div class="car-dashboard-card p-4 mb-4">
                 <form id="addSafeForm">
-                    <div class="alert bg-dark text-light d-flex align-items-center py-2 px-3 mb-4 border border-secondary">
-                        📅&nbsp; תאריך קליטה: <strong class="ms-2 text-info" id="currentDateDisplay"></strong>
+                    <div class="alert car-inner-box d-flex align-items-center py-2 px-3 mb-4 border">
+                        📅&nbsp; תאריך קליטה: <strong class="ms-2 text-primary" id="currentDateDisplay"></strong>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">מספר סידורי (מק"ט)</label>
                         <div class="input-group">
                             <label for="fileInput" class="btn btn-primary mb-0 d-flex align-items-center justify-content-center cursor-pointer px-4 fs-4" title="צלם מספר סידורי">📸</label>
-                            <input type="text" id="serialNumber" class="form-control fw-bold bg-dark text-light border-secondary" placeholder="הקלד או צלם למיקוד...">
+                            <input type="text" id="serialNumber" class="form-control fw-bold car-input" placeholder="הקלד או צלם למיקוד...">
                         </div>
                         <input type="file" id="fileInput" accept="image/*" capture="environment" class="visually-hidden">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">סוג כספת</label>
-                        <select id="safeType" class="form-select fw-bold bg-dark text-light border-secondary" required>
+                        <select id="safeType" class="form-select fw-bold car-input" required>
                             <option value="" disabled selected>בחר סוג כספת...</option>
                             <option value="SDM-100">SDM-100</option>
                             <option value="SDM-500">SDM-500</option>
@@ -1093,7 +1146,7 @@
 
                     <div class="mb-4">
                         <label class="form-label fw-bold">מצב הכספת / מקור</label>
-                        <select id="safeStatus" class="form-select fw-bold bg-dark text-light border-secondary" required>
+                        <select id="safeStatus" class="form-select fw-bold car-input" required>
                             <option value="" disabled selected>בחר סטטוס...</option>
                             <option value="new">⭐ כספת חדשה מהניילון</option>
                             <option value="returned">🔄 חזרה מלקוח (סיום פעילות)</option>
@@ -1101,26 +1154,26 @@
                         </select>
                     </div>
 
-                    <div id="returnDetailsDiv" class="mb-4 d-none p-3 bg-dark border border-warning rounded-3">
+                    <div id="returnDetailsDiv" class="mb-4 d-none p-3 car-inner-box border border-warning rounded-3">
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-warning">שם הלקוח (חובה)</label>
-                            <input type="text" id="customerName" class="form-control fw-bold bg-black text-light border-warning" placeholder="מאיזה לקוח חזרה?">
+                            <label class="form-label fw-bold text-warning-emphasis">שם הלקוח (חובה)</label>
+                            <input type="text" id="customerName" class="form-control fw-bold car-input border-warning" placeholder="מאיזה לקוח חזרה?">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-warning">מספר כספת (אופציונלי)</label>
-                            <input type="text" id="safeNumber" class="form-control fw-bold bg-black text-light border-warning" placeholder="הזן אם קיים">
+                            <label class="form-label fw-bold text-warning-emphasis">מספר כספת (אופציונלי)</label>
+                            <input type="text" id="safeNumber" class="form-control fw-bold car-input border-warning" placeholder="הזן אם קיים">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-warning">הערות טכנאי (אופציונלי)</label>
-                            <textarea id="safeConditionNotes" rows="2" class="form-control fw-bold bg-black text-light border-warning" placeholder="שריטות, חסר מפתח..."></textarea>
+                            <label class="form-label fw-bold text-warning-emphasis">הערות טכנאי (אופציונלי)</label>
+                            <textarea id="safeConditionNotes" rows="2" class="form-control fw-bold car-input border-warning" placeholder="שריטות, חסר מפתח..."></textarea>
                         </div>
                         <div>
-                            <label class="form-label fw-bold text-warning">צילום כספת נכנסת (אופציונלי)</label>
-                            <input type="file" id="incomingFileInput" accept="image/*" capture="environment" class="form-control form-control-sm bg-black text-light border-warning">
+                            <label class="form-label fw-bold text-warning-emphasis">צילום כספת נכנסת (אופציונלי)</label>
+                            <input type="file" id="incomingFileInput" accept="image/*" capture="environment" class="form-control form-control-sm car-input border-warning">
                         </div>
                     </div>
 
-                    <div id="ituranWrapper" class="form-check form-switch mb-4 bg-dark p-3 rounded d-none align-items-center border border-secondary">
+                    <div id="ituranWrapper" class="form-check form-switch mb-4 car-inner-box p-3 rounded d-none align-items-center border">
                         <input class="form-check-input ms-2 mt-0 cursor-pointer" type="checkbox" role="switch" id="hasIturan" style="transform: scale(1.3);">
                         <label class="form-check-label fw-bold cursor-pointer" for="hasIturan">כולל איתוראן מותקן</label>
                     </div>
@@ -1136,13 +1189,13 @@
         <!-- תצוגה 2: רשימות ומלאי -->
         <!-- ============================== -->
         <div id="inventoryView" class="d-none">
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-                <h3 id="listTitle" class="fw-bold mb-0 text-light">מלאי כספות נוכחי</h3>
-                <button id="viewArchiveBtn" class="btn btn-sm btn-outline-light fw-bold px-3">🗄️ יציאות והשמדות</button>
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary-subtle pb-2">
+                <h3 id="listTitle" class="fw-bold mb-0">מלאי כספות נוכחי</h3>
+                <button id="viewArchiveBtn" class="btn btn-sm btn-outline-secondary fw-bold px-3">🗄️ יציאות והשמדות</button>
             </div>
             
             <div class="mb-3">
-                <input type="text" id="searchInput" class="form-control bg-dark text-light border-primary fw-bold text-center fs-5 py-2" placeholder="🔍 חפש כספת לפי מספר סידורי...">
+                <input type="text" id="searchInput" class="form-control car-input border-primary fw-bold text-center fs-5 py-2" placeholder="🔍 חפש כספת לפי מספר סידורי...">
             </div>
 
             <!-- סרגל רובריקות דגמים -->
@@ -1161,7 +1214,6 @@
                 </button>
             </div>
 
-            <!-- תגית הסינון הפעיל (תוקנה התנגשות d-none מול d-flex) -->
             <div id="activeFilterContainer" class="d-none mb-3">
                 <div class="badge bg-info text-dark fs-6 p-2 d-flex justify-content-between align-items-center shadow-sm w-100">
                     <span id="activeFilterText">מציג: הכל</span>
@@ -1179,7 +1231,7 @@
             
             <div class="car-dashboard-card p-4 mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-bold text-light m-0">🏎️ לוח בקרה ראשי</h4>
+                    <h4 class="fw-bold m-0">🏎️ לוח בקרה ראשי</h4>
                     <span class="text-muted small">(לחץ על נתון לסינון)</span>
                 </div>
                 
@@ -1187,13 +1239,13 @@
                     <div class="col-6">
                         <div id="cardStatTotal" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card">
                             <div class="small fw-bold text-muted mb-1">סה"כ פעיל בחדר</div>
-                            <div class="fs-1 fw-bolder text-light car-metric-value" id="statTotal">0</div>
+                            <div class="fs-1 fw-bolder car-metric-value" id="statTotal">0</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div id="cardStatIturan" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-info">
-                            <div class="small fw-bold text-info mb-1">📡 סה"כ עם איתוראן</div>
-                            <div class="fs-1 fw-bolder text-info car-metric-value" id="statIturan">0</div>
+                            <div class="small fw-bold text-info-emphasis mb-1">📡 סה"כ עם איתוראן</div>
+                            <div class="fs-1 fw-bolder text-info-emphasis car-metric-value" id="statIturan">0</div>
                         </div>
                     </div>
                     <div class="col-6">
@@ -1204,14 +1256,14 @@
                     </div>
                     <div class="col-6">
                         <div id="cardStatReturned" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-warning">
-                            <div class="small fw-bold text-warning mb-1">🔄 חזרו (סיום פעילות)</div>
-                            <div class="fs-2 fw-bolder text-warning car-metric-value" id="statReturned">0</div>
+                            <div class="small fw-bold text-warning-emphasis mb-1">🔄 חזרו (סיום פעילות)</div>
+                            <div class="fs-2 fw-bolder text-warning-emphasis car-metric-value" id="statReturned">0</div>
                         </div>
                     </div>
                     <div class="col-12">
                         <div id="cardStatArchive" class="car-dashboard-card p-3 h-100 cursor-pointer stat-card border-secondary">
                             <div class="small fw-bold text-secondary mb-1">📦 יציאות והשמדות (ארכיון)</div>
-                            <div class="fs-2 fw-bolder text-light car-metric-value" id="statArchive">0</div>
+                            <div class="fs-2 fw-bolder car-metric-value" id="statArchive">0</div>
                         </div>
                     </div>
                     <div class="col-12">
@@ -1224,10 +1276,10 @@
             </div>
 
             <div class="car-dashboard-card p-4 mb-4">
-                <h5 class="fw-bold text-light mb-3">📊 סטטוס מלאי והתקנות לפי דגם</h5>
+                <h5 class="fw-bold mb-3">📊 סטטוס מלאי והתקנות לפי דגם</h5>
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover table-bordered border-secondary align-middle text-center mb-0">
-                        <thead class="table-secondary text-dark">
+                    <table class="table table-hover table-bordered border-secondary-subtle align-middle text-center mb-0">
+                        <thead class="table-secondary">
                             <tr>
                                 <th scope="col" class="text-start ps-3">סוג כספת</th>
                                 <th scope="col">סה"כ</th>
@@ -1252,7 +1304,7 @@
     <div id="cropModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
         <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 500px;">
             <div class="text-center">
-                <h5 class="fw-bolder mb-1 text-light">🎯 מקד על המספר הסידורי</h5>
+                <h5 class="fw-bolder mb-1">🎯 מקד על המספר הסידורי</h5>
                 <p class="text-muted small mb-3">הזז והקטן את המסגרת כך שתקיף רק את שורת המספר הסידורי.</p>
                 
                 <div class="crop-container mb-3">
@@ -1271,12 +1323,12 @@
     <div id="dispatchModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center z-3 glass-modal p-3">
         <div class="car-dashboard-card p-4 w-100 shadow-lg border-0" style="max-width: 400px;">
             <div class="text-center">
-                <h4 class="fw-bolder mb-3 text-light">הוצאה מהמלאי</h4>
+                <h4 class="fw-bolder mb-3">הוצאה מהמלאי</h4>
                 <p class="text-muted small mb-3">בחר את מטרת היציאה מהחדר.</p>
                 
                 <div class="mb-3 text-start">
                     <label class="form-label small fw-bold">סוג יציאה מהחדר:</label>
-                    <select id="dispatchTypeSelect" class="form-select bg-dark text-light fw-bold border-secondary">
+                    <select id="dispatchTypeSelect" class="form-select car-input fw-bold">
                         <option value="customer">🚚 יציאה להתקנה אצל לקוח</option>
                         <option value="destruction">🔥 שליחה להשמדה / גריטה</option>
                     </select>
@@ -1285,11 +1337,11 @@
                 <div id="dispatchCustomerFields">
                     <div class="mb-3 text-start">
                         <label class="form-label small fw-bold">שם הלקוח (לאן הכספת יוצאת?)</label>
-                        <input type="text" id="dispatchCustomerName" class="form-control bg-dark text-light border-secondary" placeholder="הכנס שם לקוח">
+                        <input type="text" id="dispatchCustomerName" class="form-control car-input" placeholder="הכנס שם לקוח">
                     </div>
                     <div class="mb-4 text-start">
                         <label class="form-label small fw-bold">מספר כספת (אופציונלי)</label>
-                        <input type="text" id="dispatchSafeNumber" class="form-control bg-dark text-light border-secondary" placeholder="הכנס מספר כספת">
+                        <input type="text" id="dispatchSafeNumber" class="form-control car-input" placeholder="הכנס מספר כספת">
                     </div>
                 </div>
 
