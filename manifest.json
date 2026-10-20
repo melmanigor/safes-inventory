@@ -12,7 +12,7 @@
   "lang": "he",
   "icons": [
     {
-      "src": "https://github.com/melmanigor/safes-inventory/blob/main/COVER_SDM100_3606.png",
+      "src": "COVER_SDM100_3606.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
